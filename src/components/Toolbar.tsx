@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   AppBar,
   Toolbar,
@@ -59,9 +59,16 @@ const BrowserToolbar: React.FC<ToolbarProps> = ({
 }) => {
   const [url, setUrl] = useState(currentUrl);
 
+  useEffect(() => {
+    setUrl(currentUrl);
+  }, [currentUrl]);
+
   const handleUrlSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onUrlChange(url);
+    if (url) {
+      const fullUrl = url.startsWith('http') ? url : `https://${url}`;
+      onUrlChange(fullUrl);
+    }
   };
 
   return (

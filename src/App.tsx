@@ -51,30 +51,31 @@ const App: React.FC = () => {
 
   // 导航处理
   const handleNavigate = (url: string) => {
-    const iframe = document.querySelector('iframe');
-    if (iframe) {
-      iframe.src = url;
-      setCurrentUrl(url);
-    }
+    if (!url) return;
+    setCurrentUrl(url);
   };
 
   // 书签处理
   const toggleBookmark = () => {
-    const iframe = document.querySelector('iframe');
-    if (!iframe) return;
+    if (!currentUrl) return;
 
-    const title = iframe.contentWindow?.document.title || currentUrl;
     const existingBookmark = bookmarks.find((b) => b.url === currentUrl);
-
     let newBookmarks: Bookmark[];
+
     if (existingBookmark) {
       newBookmarks = bookmarks.filter((b) => b.url !== currentUrl);
     } else {
-      newBookmarks = [...bookmarks, { title, url: currentUrl }];
+      // 使用当前URL作为标题，因为iframe可能无法访问
+      newBookmarks = [...bookmarks, { title: currentUrl, url: currentUrl }];
     }
 
     setBookmarks(newBookmarks);
     Cookies.set('bookmarks', JSON.stringify(newBookmarks));
+  };
+
+  // iframe加载错误处理
+  const handleIframeError = () => {
+    console.error('Failed to load URL:', currentUrl);
   };
 
   // 主题处理
@@ -91,7 +92,7 @@ const App: React.FC = () => {
           onBack={() => window.history.back()}
           onForward={() => window.history.forward()}
           onHome={() => setCurrentUrl('')}
-          onRefresh={() => handleNavigate(currentUrl)}
+          onRefresh={() => currentUrl && handleNavigate(currentUrl)}
           onBookmark={toggleBookmark}
           onBookmarksOpen={() => setIsBookmarksOpen(true)}
           onSettingsOpen={() => setIsSettingsOpen(true)}
@@ -110,6 +111,8 @@ const App: React.FC = () => {
                 border: 'none',
               }}
               title="browser-frame"
+              onError={handleIframeError}
+              sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
             />
           ) : (
             <NewTab onNavigate={handleNavigate} />
