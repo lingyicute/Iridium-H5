@@ -63,7 +63,7 @@ const App: React.FC = () => {
     const iframe = document.querySelector('iframe');
     if (!iframe) return;
 
-    const title = iframe.contentTitle || currentUrl;
+    const title = iframe.contentWindow?.document.title || currentUrl;
     const existingBookmark = bookmarks.find((b) => b.url === currentUrl);
 
     let newBookmarks: Bookmark[];

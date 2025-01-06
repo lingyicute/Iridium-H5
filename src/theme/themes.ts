@@ -1,5 +1,3 @@
-import { Theme } from '@mui/material/styles';
-
 // 定义主题类型
 export interface ThemeOption {
   name: string;

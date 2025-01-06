@@ -18,7 +18,7 @@ import {
   Settings,
 } from '@mui/icons-material';
 
-const StyledToolbar = styled(Toolbar)(({ theme }) => ({
+const StyledToolbar = styled(Toolbar)(() => ({
   minHeight: '48px',
   padding: '0 16px',
   gap: '8px',

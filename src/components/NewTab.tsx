@@ -17,7 +17,7 @@ const Logo = styled(Typography)(({ theme }) => ({
   WebkitTextFillColor: 'transparent',
 }));
 
-const SearchBox = styled(TextField)(({ theme }) => ({
+const SearchBox = styled(TextField)(() => ({
   width: '100%',
   maxWidth: '584px',
   '& .MuiInputBase-root': {
