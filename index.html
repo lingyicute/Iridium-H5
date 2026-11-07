@@ -2254,7 +2254,8 @@ function pageSearch(t,u){
   fetch(`https://zh.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*&srlimit=12`).then(r=>r.json()).then(d=>{
     const rs=(d.query&&d.query.search)||[];const box=$('.list',root);if(!box.isConnected)return;
     box.style.color='';
-    box.innerHTML=(rs.length?rs.map(r=>{const url='https://zh.wikipedia.org/wiki/'+encodeURIComponent(r.title.replace(/ /g,'_'));return `<div class="item"><div class="u">${esc(url)}</div><a class="t" data-url="${esc(url)}">${esc(r.title)} - 维基百科</a><div class="sn">${(r.snippet||'').replace(/<(?!\/?span)[^>]*>/g,'')}…</div></div>`}).join(''):`<div class="empty">找不到与“${esc(q)}”相符的内容。</div>`)+`<div class="alt">在其他搜索引擎中搜索：${alts}</div>`;
+    const cleanSn=s=>String(s||'').replace(/<span\s+class="searchmatch">([\s\S]*?)<\/span>/gi,'\0$1\x01').replace(/<[^>]*>/g,'').replace(/\0([\s\S]*?)\x01/g,'<span class="searchmatch">$1</span>');
+    box.innerHTML=(rs.length?rs.map(r=>{const url='https://zh.wikipedia.org/wiki/'+encodeURIComponent(r.title.replace(/ /g,'_'));return `<div class="item"><div class="u">${esc(safeDec(url))}</div><a class="t" data-url="${esc(url)}">${esc(r.title)} - 维基百科</a><div class="sn">${cleanSn(r.snippet)}…</div></div>`}).join(''):`<div class="empty">找不到与“${esc(q)}”相符的内容。</div>`)+`<div class="alt">在其他搜索引擎中搜索：${alts}</div>`;
   }).catch(()=>{const box=$('.list',root);box.innerHTML=`<div class="empty">无法连接到搜索服务，请检查网络。</div><div class="alt">在其他搜索引擎中搜索：${alts}</div>`});
   return root;
 }
@@ -2263,6 +2264,7 @@ function pageSettings(t,u){
   t.title='设置';
   let sec=(u.pathname||'').replace(/^\/+|\/+$/g,'')||'people';if(sec==='about')sec='help';
   const secs=[['people','您和 Iridium'],['autofill','自动填充和密码'],['privacy','隐私和安全'],['performance','性能'],['appearance','外观'],['search','搜索引擎'],['browser','默认浏览器'],['onStartup','启动时'],['languages','语言'],['downloads','下载内容'],['a11y','无障碍'],['system','系统'],['reset','重置设置'],['help','关于 Iridium']];
+  if(!secs.some(s=>s[0]===sec))sec='people';
   const ICO=d=>svg(d,20);
   const icons={people:IRI(20),autofill:svg(P.keyp,20),privacy:svg(P.lock,20),performance:ICO('M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z'),appearance:svg(P.edit,20),search:svg(P.search,20),browser:ICO('M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10z'),onStartup:svg(P.reload,20),languages:ICO('M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z'),downloads:svg(P.dl,20),a11y:ICO('M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z'),system:ICO('M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z'),reset:svg(P.history,20),help:svg(P.info,20)};
   const tg=(k,v)=>`<label class="sw"><input type="checkbox" data-k="${k}" ${v?'checked':''}><span></span></label>`;
@@ -2286,12 +2288,12 @@ function pageSettings(t,u){
 </div></div></div>`);
   const show=()=>{const q=$('.psearch input',root).value.trim().toLowerCase();
     $$('nav a[data-sec]',root).forEach(a=>a.classList.toggle('on',!q&&a.dataset.sec===sec));
-    $$('section',root).forEach(s=>{s.style.display=(!q&&s.dataset.s===sec)||q?'':'none';let any=!q;$$('.srow',s).forEach(r=>{const m=!q||r.textContent.toLowerCase().includes(q);r.style.display=m?'':'none';if(m)any=true});if(q)s.style.display=any?'':'none'})};
+    $$('section',root).forEach(s=>{s.style.display=(!q&&s.dataset.s===sec)||q?'':'none';let any=!q;$$('.card',s).forEach(c=>{let cany=!q;$$('.srow',c).forEach(r=>{const m=!q||r.textContent.toLowerCase().includes(q);r.style.display=m?'':'none';if(m){any=true;cany=true}});c.style.display=cany?'':'none'});if(q)s.style.display=any?'':'none'})};
   show();
   $('.psearch input',root).addEventListener('input',show);
   root.addEventListener('click',e=>{
-    const a=e.target.closest('[data-sec]');if(a){sec=a.dataset.sec;history.replaceState&&0;t.url='chrome://settings/'+(sec==='people'?'':sec)+'';t.hist[t.idx]&&(t.hist[t.idx].url=t.url);show();updateUI();return}
-    const g=e.target.closest('[data-go]');if(g){const v=g.dataset.go;if(/^chrome:/.test(v))go(t,v);else{sec=v;show()}return}
+    const a=e.target.closest('[data-sec]');if(a){$('.psearch input',root).value='';sec=a.dataset.sec;t.url='chrome://settings/'+(sec==='people'?'':sec)+'';t.hist[t.idx]&&(t.hist[t.idx].url=t.url);show();updateUI();return}
+    const g=e.target.closest('[data-go]');if(g){const v=g.dataset.go;if(/^chrome:/.test(v))go(t,v);else{$('.psearch input',root).value='';sec=v;show()}return}
     if(e.target.closest('[data-soon]')){toast('此设置在当前版本中暂不可用');return}
     const cv=e.target.closest('.srow.chev');if(cv){toast('此设置在当前版本中暂不可用');return}
     const db=e.target.closest('[data-defb]');if(db){S.isDefault=true;saveS();db.replaceWith(el('<span style="color:var(--text2);font-size:13px">Iridium 已是默认浏览器</span>'));toast('已将 Iridium 设为默认浏览器');return}
