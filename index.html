@@ -1296,7 +1296,7 @@ function buildMenu(items){
   items=items.filter(Boolean);
   if(!items.length)items=[{label:'（空）',disabled:true}];
   items.forEach(it=>{
-    if(it==='-'){m.append(el('<div class="ms" role="separator"></div>'));return}
+    if(it==='-'||it.sep){m.append(el('<div class="ms" role="separator"></div>'));return}
     if(it.custom){m.append(it.custom(m));return}
     const d=el(`<div class="mi${it.disabled?' dis':''}" role="menuitem"><span class="ic">${it.checked?I.check:(it.icon||'')}</span><span class="lb">${esc(it.label)}</span><span class="k">${it.sub?I.chev:esc(it.key||'')}</span></div>`);
     d._it=it;
@@ -1977,7 +1977,7 @@ function mainMenu(){
     {label:'查找和修改',icon:ic(P.search),sub:[{label:'查找…',key:'Ctrl+F',fn:openFind}]},
 
     {label:'投放、保存和分享',icon:ic(P.cast),sub:[{label:'投放…',fn:()=>toast('找不到可用的投放设备')},{label:'将页面另存为…',key:'Ctrl+S',fn:soon('另存为')},{label:'创建快捷方式…',disabled:!/^https?:/i.test(t.url),fn:soon('创建快捷方式')},'-',{label:'复制链接',disabled:!/^https?:/i.test(t.url),fn:()=>{navigator.clipboard&&navigator.clipboard.writeText(t.url).then(()=>toast('链接已复制'),()=>toast('无法访问剪贴板'))}},{label:'生成二维码',disabled:!/^https?:/i.test(t.url),fn:soon('二维码')},{label:'在宿主浏览器中打开此页面',disabled:!/^https?:/i.test(t.url),fn:()=>openReal(t.url)}]},
-    {label:'更多工具',icon:ic(P.build),sub:[{label:'将页面另存为…',key:'Ctrl+S',fn:soon('另存为')},{label:'创建快捷方式…',fn:soon('创建快捷方式')},{label:'命名窗口…',fn:soon('命名窗口')},'-',{label:'清除浏览数据…',key:'Ctrl+Shift+Del',fn:clearDataDialog},{label:'扩展程序',fn:()=>openInternal('chrome://extensions/')},{label:'任务管理器',key:'Search+Esc',key:'Shift+Esc',fn:()=>openTaskMgr()},{label:'自定义 Iridium',fn:openCustomize},'-',{label:'开发者工具',key:'Ctrl+Shift+I',fn:()=>toast('开发者工具在 iframe 模式下不可用，请使用宿主浏览器的 F12')}]},
+    {label:'更多工具',icon:ic(P.build),sub:[{label:'将页面另存为…',key:'Ctrl+S',fn:soon('另存为')},{label:'创建快捷方式…',fn:soon('创建快捷方式')},{label:'命名窗口…',fn:soon('命名窗口')},'-',{label:'清除浏览数据…',key:'Ctrl+Shift+Del',fn:clearDataDialog},{label:'扩展程序',fn:()=>openInternal('chrome://extensions/')},{label:'任务管理器',key:'Shift+Esc',fn:()=>openTaskMgr()},{label:'自定义 Iridium',fn:openCustomize},'-',{label:'开发者工具',key:'Ctrl+Shift+I',fn:()=>toast('开发者工具在 iframe 模式下不可用，请使用宿主浏览器的 F12')}]},
     '-',
     {label:'帮助',icon:ic(P.help),sub:[{label:'关于 Iridium',fn:()=>openInternal('chrome://settings/help')},{label:'关于 IridiumOS',fn:()=>openOsSettings('about')},{label:'帮助中心',fn:soon('帮助中心')},{label:'报告问题…',key:'Alt+Shift+I',fn:soon('报告问题')},'-',{label:'chrome:// 内部页面',fn:()=>openInternal('chrome://about/')},{label:'版本信息',fn:()=>openInternal('chrome://version/')}]},
     {label:'设置',icon:ic(P.gear),fn:()=>openInternal('chrome://settings/')},
@@ -3203,7 +3203,7 @@ function act(e,root){
   else if(a==='retry'){DL=DL.filter(x=>x!==d);start(d.url,d.name)}
   else if(a==='show'){toast('已在文件夹中显示：~/Downloads/'+d.name)}
   else if(a==='open'){if(d.blob)window.open(d.blob,'_blank');else if(d.state==='done')toast('无法打开文件：已被移动或删除');}
-  else if(a==='more'){const r=b.getBoundingClientRect();showMenu([{label:'打开',fn:()=>d.blob?window.open(d.blob,'_blank'):toast('无法打开文件')},{label:'在文件夹中显示',fn:()=>toast('已在文件夹中显示：~/Downloads/'+d.name)},{label:'复制下载链接',fn:()=>{navigator.clipboard&&navigator.clipboard.writeText(d.url).catch(()=>{});toast('已复制链接')}},{sep:1},{label:'从列表中删除',fn:()=>{DL=DL.filter(x=>x!==d);save();render()}}],r.right,r.bottom+2,{right:true});return}
+  else if(a==='more'){const r=b.getBoundingClientRect();showMenu([{label:'打开',fn:()=>d.blob?window.open(d.blob,'_blank'):toast('无法打开文件')},{label:'在文件夹中显示',fn:()=>toast('已在文件夹中显示：~/Downloads/'+d.name)},{label:'复制下载链接',fn:()=>{navigator.clipboard&&navigator.clipboard.writeText(d.url).catch(()=>{});toast('已复制链接')}},'-',{label:'从列表中删除',fn:()=>{DL=DL.filter(x=>x!==d);save();render()}}],r.right,r.bottom+2,{right:true});return}
   save();render();
 }
 /* ---------- chrome://downloads ---------- */
