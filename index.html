@@ -2485,7 +2485,7 @@ document.addEventListener('keydown',e=>{
   else if(c&&e.shiftKey&&k==='n'){stop();newIncognito()}
   else if(c&&!e.shiftKey&&k==='n'){stop();newWindow()}
   else if((c&&k==='l')||(e.altKey&&k==='d')||e.key==='F6'){stop();focusOmni()}
-  else if((c&&!e.shiftKey&&k==='r')||e.key==='F5'){stop();reload(t)}
+  else if((c&&!e.shiftKey&&k==='r')||(!c&&e.key==='F5')){stop();reload(t)}
   else if(c&&!e.shiftKey&&k==='d'){stop();if(t.url&&!/newtab/.test(t.url))bookmarkBubble(t)}
   else if(c&&!e.shiftKey&&k==='h'){stop();openInternal('chrome://history/')}
   else if(c&&!e.shiftKey&&k==='j'){stop();openInternal('chrome://downloads/')}
@@ -2511,10 +2511,10 @@ document.addEventListener('keydown',e=>{
   else if(c&&k==='e'){stop();focusOmni()}
   else if(c&&k==='s'){stop();toast('另存为：当前版本暂不支持')}
   else if(e.altKey&&(k==='f'||k==='e')){stop();mainMenu()}
-  else if(e.altKey&&k==='['){stop();snapWin('l')}
-  else if(e.altKey&&k===']'){stop();snapWin('r')}
-  else if(e.altKey&&k==='-'){stop();win.min=true;syncWin()}
-  else if(e.altKey&&k==='='){stop();win.max=!win.max;syncWin()}
+  else if(!EMB&&e.altKey&&k==='['){stop();snapWin('l')}
+  else if(!EMB&&e.altKey&&k===']'){stop();snapWin('r')}
+  else if(!EMB&&e.altKey&&k==='-'){stop();win.min=true;syncWin()}
+  else if(!EMB&&e.altKey&&k==='='){stop();win.max=!win.max;syncWin()}
   else if(e.shiftKey&&e.key==='Escape'){stop();openTaskMgr()}
   else if(e.key==='Escape'){closePopups();closeOS();hideHC();if(t&&t.loading)stop_(t)}
 },true);
@@ -3473,7 +3473,7 @@ render();
     w.fr.classList.toggle('max',w.max&&!w.fs);w.fr.classList.toggle('fs',w.fs);w.fr.classList.toggle('blur',focus!==w.id);
     send(w,'state',state(w));
   }
-  function pushAll(){wins.forEach(push);document.body.classList.toggle('wfs',wins.some(w=>w.fs&&!w.min));window.updateShelf()}
+  function pushAll(){wins.forEach(push);document.body.classList.toggle('wfs',wins.some(w=>w.fs&&!w.min));if(!wins.some(w=>!w.min&&!w.closing))document.title='Iridium';window.updateShelf()}
   function saveWins(){store.set('wins',wins.filter(w=>!w.inc&&!w.closing).map(w=>({id:w.id,b:w.b,max:w.max,rb:w.rb})))}
   function broadcast(){
     clearTimeout(bcT);
@@ -3792,7 +3792,7 @@ render();
       if(w.min)restore(w);else focusWin(w);
     },
     openUrl(v){
-      const w=byId(focus)&&!byId(focus).min?byId(focus):order().find(x=>!x.min&&!x.inc);
+      const w=(byId(focus)&&!byId(focus).min&&!byId(focus).inc?byId(focus):null)||order().find(x=>!x.min&&!x.inc)||order().find(x=>!x.inc);
       if(w){focusWin(w);send(w,'openurl',{url:v})}else create({mode:'new',url:v,max:true});
     },
     newWindow(inc,url){create({mode:'new',inc:inc,url:url||null})},
@@ -3912,7 +3912,7 @@ render();
       }catch(e){}
     };
     if(p.has('u')||p.has('incognito')){
-      clean(new Set());
+      if(!p.has('incognito'))clean(new Set());
       create({inc:p.has('incognito'),url:p.get('u'),mode:'new',max:true});
     }else if(S.startup==='continue'){
       let list=store.get('wins',[]);
