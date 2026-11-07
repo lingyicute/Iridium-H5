@@ -2553,7 +2553,7 @@ let BAT={l:100,c:true};
 if(navigator.getBattery)navigator.getBattery().then(b=>{const u=()=>{BAT={l:Math.round(b.level*100),c:b.charging};renderStatus()};b.addEventListener('levelchange',u);b.addEventListener('chargingchange',u);u()}).catch(()=>{});
 function applyOS(){
   document.body.classList.toggle('osdark',isOsDark());
-  $('#desktop').style.background=WALLS[OS.wall].c;
+  $('#desktop').style.background=(WALLS[OS.wall]||WALLS[0]).c;
   $('#dim').style.opacity=(100-OS.bright)/100*.75;
   $('#night').style.opacity=OS.night?.35:0;
   renderStatus();
@@ -2607,8 +2607,9 @@ function toggleQS(cal){
   closeOS();closePopups();osOpen='qs';$('#status').classList.add('on');
   const b=el('<div class="osb" id="qs"></div>');document.body.append(b);
   calM=cal?new Date():null;drawQS(b);
-  b.addEventListener('input',e=>{const k=e.target.dataset.s;if(!k)return;OS[k]=+e.target.value;saveOS();applyOS()});
+  b.addEventListener('input',e=>{const k=e.target.dataset.s;if(!k)return;OS[k]=+e.target.value;if(k==='vol'){if(OS.vol>0)OS._vol=OS.vol;const vi=$('[data-m=vol]',b);if(vi)vi.innerHTML=svg(OS.vol?P.vol:P.volOff,20)}saveOS();applyOS()});
   b.addEventListener('click',e=>{
+    if(e.target.closest('[data-m=vol]')){if(OS.vol>0){OS._vol=OS.vol;OS.vol=0}else OS.vol=OS._vol||70;saveOS();applyOS();drawQS(b);return}
     const T=e.target.closest('[data-t]');
     if(T){
       const k=T.dataset.t;
@@ -2640,15 +2641,16 @@ function drawQS(b){
   b.innerHTML=`<button class="qdate" data-a="cal">${dateStr()}</button>
   <div class="qtiles">${tile('wifi',P.wifi,'网络',OS.wifi?'Iridium-5G':'已关闭',OS.wifi)}${tile('bt',P.bt,'蓝牙',OS.bt?'已开启':'已关闭',OS.bt)}${tile('dnd',P.bell,'勿扰模式',OS.dnd?'已开启':'已关闭',OS.dnd)}${tile('dark',P.moon,'深色主题',isOsDark()?'已开启':'已关闭',isOsDark())}${tile('night',P.sun,'夜间模式',OS.night?'已开启':'已关闭',OS.night)}${tile('shot',P.cam,'屏幕截图','',false)}</div>
   <div class="qsl">${svg(P.bright,20)}<input type="range" min="20" max="100" value="${OS.bright}" data-s="bright" aria-label="亮度"></div>
-  <div class="qsl">${svg(OS.vol?P.vol:P.volOff,20)}<input type="range" min="0" max="100" value="${OS.vol}" data-s="vol" aria-label="音量"></div>
+  <div class="qsl"><button data-m="vol" title="${OS.vol?'静音':'取消静音'}" style="display:flex">${svg(OS.vol?P.vol:P.volOff,20)}</button><input type="range" min="0" max="100" value="${OS.vol}" data-s="vol" aria-label="音量"></div>
   <div class="qbot"><button class="qpill" data-a="lock">退出登录</button><button class="qc" data-a="lock" title="锁定">${svg(P.lock,20)}</button><button class="qc" data-a="power" title="关机">${svg(P.power,20)}</button><span style="flex:1"></span><span class="qbat">${BAT.l}%${BAT.c?' · 已接通电源':''}</span><button class="qc" data-a="set" title="设置">${svg(P.gear,20)}</button></div>`;
 }
 
 /* 锁屏 / 关机 */
 function lockScreen(){
   closeOS();if($('#lock'))return;document.body.classList.add('locked');
-  const d=el(`<div id="lock"><div class="lbg" style="background:${WALLS[OS.wall].c}"></div><div class="lt"><div class="tm">${hhmm()}</div><div>${dateStr()}</div></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:18px">User</div><button class="btn pri" style="color:#fff">点击或按 Enter 键解锁</button></div></div>`);
-  document.body.append(d);
+  try{if(document.activeElement)document.activeElement.blur();window.focus()}catch(e){}
+  const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lt"><div class="tm">${hhmm()}</div><div>${dateStr()}</div></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:18px">User</div><button class="btn pri" style="color:#fff">点击或按 Enter 键解锁</button></div></div>`);
+  document.body.append(d);$('button',d).focus();
   const un=()=>{d.remove();document.body.classList.remove('locked');document.removeEventListener('keydown',kh,true)};
   const kh=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();un()}};
   document.addEventListener('keydown',kh,true);d.onclick=un;
