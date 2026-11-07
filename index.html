@@ -1388,10 +1388,11 @@ function activate(t){
   if(t.group&&groups[t.group])groups[t.group].collapsed=false;
   tabs.forEach(fillTab);renderGroups();applyZoom(t);updateUI();$('#findbar').hidden=true;
 }
+function pushClosed(t,i){clearTimeout(t._lt);if(t.el)try{tro.unobserve(t.el)}catch(e){}if(t.url&&!/^chrome:\/\/newtab/.test(t.url))closedStack.push({url:t.url,title:t.title||'',pinned:t.pinned,index:i})}
 function closeTab(t,fromMouse){
   const i=tabs.indexOf(t);if(i<0)return;
-  if(t.url&&!/^chrome:\/\/newtab/.test(t.url))closedStack.push({url:t.url,pinned:t.pinned,index:i});
-  if(tabs.length===1){tabs.forEach(x=>x.view.remove());tabs=[];activeTab=null;closeWindow();return}
+  pushClosed(t,i);
+  if(tabs.length===1){tabs.forEach(x=>{clearTimeout(x._lt);x.view.remove()});tabs=[];activeTab=null;closeWindow();return}
   tabs.splice(i,1);t.view.remove();
   if(fromMouse&&t.el&&tabs.length)lockTabs(t.el);
   collapseTab(t.el);
@@ -1462,8 +1463,8 @@ function tabMenu(t,x,y){
     ...(window.IWM?IWM.tabMenuItems(t,ic):[]),
     {label:'在宿主浏览器中打开此页',icon:ic(P.ext),disabled:!/^https?:/i.test(t.url),fn:()=>openReal(t.url)},'-',
     {label:'关闭',icon:ic(P.close),key:'Ctrl+W',fn:()=>closeTab(t)},
-    {label:'关闭其他标签页',disabled:tabs.length<2,fn:()=>{tabs.filter(o=>o!==t).forEach(o=>{o.view.remove()});tabs=[t];activate(t);renderTabs();saveSession()}},
-    {label:'关闭右侧标签页',disabled:i>=tabs.length-1,fn:()=>{tabs.slice(i+1).forEach(o=>o.view.remove());tabs=tabs.slice(0,i+1);if(!tabs.includes(activeTab))activate(t);renderTabs();saveSession()}},
+    {label:'关闭其他标签页',disabled:tabs.length<2,fn:()=>{tabs.forEach((o,idx)=>{if(o!==t){pushClosed(o,idx);o.view.remove()}});tabs=[t];activate(t);renderTabs();saveSession()}},
+    {label:'关闭右侧标签页',disabled:i>=tabs.length-1,fn:()=>{tabs.slice(i+1).forEach((o,idx)=>{pushClosed(o,i+1+idx);o.view.remove()});tabs=tabs.slice(0,i+1);if(!tabs.includes(activeTab))activate(t);renderTabs();saveSession()}},
     '-',{label:'重新打开已关闭的标签页',key:'Ctrl+Shift+T',disabled:!closedStack.length,fn:reopenClosed}
   ],x,y);
 }
@@ -1643,8 +1644,8 @@ function load(t,url){
   applyZoom(t);fillTab(t);if(t===activeTab)updateUI();saveSession();
 }
 function setTitle(t,title){t.title=title;if(t.hist[t.idx])t.hist[t.idx].title=title;fillTab(t);if(t===activeTab)document.title=title+' - Iridium'}
-function reload(t){if(!t)return;if(t.kind==='web'&&t.frame){t.loading=true;t.frame.src=t.url;fillTab(t);updateUI()}else load(t,t.url)}
-function stop(t){if(t&&t.loading){t.loading=false;try{t.frame.contentWindow.stop()}catch(e){}fillTab(t);updateUI()}}
+function reload(t){if(!t)return;if(t.kind==='web'&&t.frame){const f=t.frame;clearTimeout(t._lt);t.loading=true;if(typeof sbKey!=='undefined')sbKey='';t._lt=setTimeout(()=>{if(t.frame===f&&t.loading){t.loading=false;fillTab(t);if(t===activeTab)updateUI()}},25000);f.src=t.url;fillTab(t);updateUI()}else load(t,t.url)}
+function stop(t){if(t&&t.loading){clearTimeout(t._lt);t.loading=false;try{t.frame.contentWindow.stop()}catch(e){}fillTab(t);updateUI()}}
 function goBack(t){if(t.idx>0){t.idx--;load(t,t.hist[t.idx].url)}}
 function goFwd(t){if(t.idx<t.hist.length-1){t.idx++;load(t,t.hist[t.idx].url)}}
 const ZSTEPS=[.25,.33,.5,.67,.75,.8,.9,1,1.1,1.25,1.5,1.75,2,2.5,3,4,5];
@@ -1967,7 +1968,7 @@ function mainMenu(){
     {label:'新建窗口',icon:ic(P.win),key:'Ctrl+N',fn:()=>newWindow()},
     {label:'新建无痕窗口',icon:ic(P.inc),key:'Ctrl+Shift+N',fn:()=>newIncognito()},'-',
     {label:'密码和自动填充',icon:ic(P.keyp),sub:[{label:'密码管理工具',fn:()=>openInternal('chrome://password-manager/')},{label:'付款方式',fn:soon('付款方式')},{label:'地址和其他信息',fn:soon('地址')}]},
-    {label:'历史记录',icon:ic(P.history),sub:()=>[{label:'历史记录',key:'Ctrl+H',fn:()=>openInternal('chrome://history/')},'-',{label:'最近关闭',disabled:true},...closedStack.slice(-4).reverse().map((c,i)=>({label:c.url,icon:fav(c.url,16),fn:()=>{closedStack.splice(closedStack.length-1-i,1);newTab(c.url)}})),'-',...recent]},
+    {label:'历史记录',icon:ic(P.history),sub:()=>[{label:'历史记录',key:'Ctrl+H',fn:()=>openInternal('chrome://history/')},'-',{label:'最近关闭',disabled:true},...closedStack.slice(-4).reverse().map((c,i)=>({label:c.title||c.url,icon:fav(c.url,16),fn:()=>{closedStack.splice(closedStack.length-1-i,1);newTab(c.url,{pinned:c.pinned})}})),'-',...recent]},
     {label:'下载内容',icon:ic(P.dl),key:'Ctrl+J',fn:()=>openInternal('chrome://downloads/')},
     {label:'书签和列表',icon:ic(P.star),sub:()=>[{label:'为此标签页添加书签…',key:'Ctrl+D',fn:()=>bookmarkBubble(cur())},{label:'显示书签栏',checked:S.showBm,key:'Ctrl+Shift+B',fn:()=>{S.showBm=!S.showBm;saveS();applySettings()}},{label:'书签管理器',key:'Ctrl+Shift+O',fn:()=>openInternal('chrome://bookmarks/')},'-',...bmMenuItems(BM.bar),...(BM.other.length?['-',{label:'其他书签',icon:svg(P.folder,16),sub:()=>bmMenuItems(BM.other)}]:[])]},
     {label:'标签页组',icon:ic('M5 4h14c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm0 6v8h14v-8H5zM5 6v2h5V6H5z'),sub:()=>[{label:'新建标签页组',icon:ic(P.add),fn:()=>newGroup(cur())},...(Object.keys(groups).length?['-',...Object.values(groups).map(g=>({label:g.name||'未命名群组',icon:`<span class="gdot" style="background:${GCOL[g.color]};margin:4px"></span>`,fn:()=>{const m=groupMembers(g.id);if(g.collapsed)toggleGroup(g);if(m[0])activate(m[0])}}))]:[])]},
@@ -2024,13 +2025,13 @@ toggler($('#tabsearch'),'ts',()=>{
     const q=$('#tsq',b).value.trim().toLowerCase();let h='',n=0;
     const ts=tabs.filter(t=>!q||((t.title||'')+' '+t.url).toLowerCase().includes(q));
     if(ts.length){h+='<div class="tsh">已打开的标签页</div>';ts.forEach(t=>{h+=`<div class="tsr${t===activeTab?' cur':''}" role="option" data-t="${t.id}" data-n="${n++}"><span class="tsf">${fav(t.url,16)}</span><span class="tsm"><span class="tst">${esc(t.title||t.url)}</span><span class="tsu">${esc(host(t.url))}</span></span><button class="tsx" title="关闭标签页" data-x="${t.id}">${I.close}</button></div>`})}
-    const cl=closedStack.slice(-5).reverse().filter(c=>!q||c.url.toLowerCase().includes(q));
-    if(cl.length){h+='<div class="tsh">最近关闭</div>';cl.forEach(c=>{h+=`<div class="tsr" role="option" data-c="${esc(c.url)}" data-n="${n++}"><span class="tsf">${fav(c.url,16)}</span><span class="tsm"><span class="tst">${esc(c.title||host(c.url))}</span><span class="tsu">${esc(host(c.url))}</span></span></div>`})}
+    const cl=closedStack.slice(-5).reverse().filter(c=>!q||((c.title||'')+' '+c.url).toLowerCase().includes(q));
+    if(cl.length){h+='<div class="tsh">最近关闭</div>';cl.forEach(c=>{const ci=closedStack.lastIndexOf(c);h+=`<div class="tsr" role="option" data-c="${esc(c.url)}" data-ci="${ci}" data-n="${n++}"><span class="tsf">${fav(c.url,16)}</span><span class="tsm"><span class="tst">${esc(c.title||host(c.url))}</span><span class="tsu">${esc(host(c.url))}</span></span></div>`})}
     $('#tsl',b).innerHTML=h||'<div class="tsn">没有匹配的标签页</div>';
     if(!keep)sel=q?(n?0:-1):-1;mark(false)};
   const rows=()=>$$('.tsr',b);
   const mark=(scroll)=>{rows().forEach((r,i)=>r.classList.toggle('sel',i===sel));const r=rows()[sel];if(r&&scroll)r.scrollIntoView({block:'nearest'})};
-  const choose=r=>{if(!r)return;if(r.dataset.t){const t=byId(r.dataset.t);closePopups();t&&activate(t)}else if(r.dataset.c){closePopups();newTab(r.dataset.c)}};
+  const choose=r=>{if(!r)return;if(r.dataset.t){const t=byId(r.dataset.t);closePopups();t&&activate(t)}else if(r.dataset.c){const ci=+r.dataset.ci,c=ci>=0?closedStack.splice(ci,1)[0]:null;closePopups();newTab(r.dataset.c,{pinned:c&&c.pinned})}};
   draw();$('#tsq',b).oninput=()=>draw();$('#tsq',b).focus();
   const cr=$('.tsr.cur',b);cr&&cr.scrollIntoView({block:'center'});
   b.addEventListener('keydown',e=>{const n=rows().length;
