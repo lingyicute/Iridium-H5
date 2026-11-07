@@ -1601,6 +1601,7 @@ function searchUrl(q){const e=ENGINES[S.engine]||ENGINES.iridium;return e.url?e.
 function looksLikeUrl(s){s=s.trim();return !!s&&!/\s/.test(s)&&(/^(chrome|iridium|about|chrome-search):/i.test(s)||/^[a-z][a-z0-9+.-]*:\/\//i.test(s)||URLRE.test(s)||/^(data|javascript|view-source):/i.test(s))}
 function resolve(inp){
   inp=(inp||'').trim();if(!inp)return 'chrome://newtab/';
+  if(inp[0]==='?')return searchUrl(inp.slice(1).trim());
   if(/^(chrome|iridium):\/\//i.test(inp)){try{const u=new URL(inp.replace(/^iridium:/i,'chrome:'));let h=u.host;if(h==='help')return 'chrome://settings/help';return 'chrome://'+h+(u.pathname||'/')+u.search+u.hash}catch(e){return inp}}
   if(/^about:blank/i.test(inp))return 'about:blank';
   if(/^about:/i.test(inp))return resolve('chrome://'+inp.slice(6));
@@ -1724,6 +1725,7 @@ function buildSugg(q){
     else if(kw.id==='hist'){const su=new Set();HIST.filter(h=>!q||h.title.toLowerCase().includes(ql2)||h.url.toLowerCase().includes(ql2)).forEach(h=>{if(su.size<8&&!su.has(h.url)){su.add(h.url);push({type:'hist',text:h.title,value:h.url,sub:h.url})}})}
     else tabs.filter(t=>!q||(t.title+' '+t.url).toLowerCase().includes(ql2)).forEach(t=>push({type:'tab',text:t.title,value:t.id,sub:t.url}));
     return out}
+  if(q&&q[0]==='?'){const sq=q.slice(1).trim();push({type:'search',text:sq,value:'?'+sq,sub:'— '+(ENGINES[S.engine]||ENGINES.iridium).name+' 搜索'});return out}
   if(q&&q[0]==='@'&&!/\s/.test(q)){KWS.filter(k=>k.k.startsWith(ql)||k.zh.startsWith(q)).forEach(k=>push({type:'kw',kw:k,text:k.zh,value:k.k,sub:k.label}))}
   if(q)push(looksLikeUrl(q)?{type:'url',text:q,value:q,sub:'打开网址'}:{type:'search',text:q,value:q,sub:'— '+(ENGINES[S.engine]||ENGINES.iridium).name+' 搜索'});
   if(q){
