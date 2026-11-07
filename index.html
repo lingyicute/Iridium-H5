@@ -1455,7 +1455,7 @@ function tabMenu(t,x,y){
     {label:'在右侧新建标签页',icon:ic(P.add),fn:()=>newTab(null,{index:i+1})},'-',
     {label:'重新加载',icon:ic(P.reload),key:'Ctrl+R',fn:()=>reload(t)},
     {label:'复制',icon:ic(P.copy),fn:()=>{newTab(t.url,{index:i+1,bg:true})}},
-    {label:t.pinned?'取消固定':'固定',icon:ic(P.pin),fn:()=>{t.pinned=!t.pinned;tabs.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));renderTabs();saveSession()}},
+    {label:t.pinned?'取消固定':'固定',icon:ic(P.pin),fn:()=>{t.pinned=!t.pinned;if(t.pinned)t.group=null;tabs.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));renderTabs();saveSession()}},
     !t.pinned&&{label:'添加到新群组',icon:ic(P.add),fn:()=>newGroup(t)},
     (!t.pinned&&Object.keys(groups).filter(k=>k!==t.group).length)?{label:'添加到群组',icon:ic(P.chev),sub:()=>Object.values(groups).filter(g=>g.id!==t.group).map(g=>({label:g.name||('未命名群组（'+GCN[g.color]+'）'),icon:`<span class="gdot" style="background:${GCOL[g.color]}"></span>`,fn:()=>addToGroup(t,g.id)}))}:null,
     t.group?{label:'从群组中移除',icon:ic(P.close),fn:()=>ungroup(t)}:null,
@@ -1504,7 +1504,7 @@ function newGroup(t){
 }
 function regroupAfterDrag(te){
   const t=byId(te.dataset.id);if(!t||t.pinned)return;const i=tabs.indexOf(t),l=tabs[i-1],r=tabs[i+1];
-  if(l&&r&&l.group&&l.group===r.group)t.group=l.group;
+  if(l&&r&&l.group&&l.group===r.group&&groups[l.group]&&!groups[l.group].collapsed)t.group=l.group;
   else if(t.group&&(!l||l.group!==t.group)&&(!r||r.group!==t.group))t.group=null;
 }
 function toggleGroup(g){
@@ -1513,7 +1513,7 @@ function toggleGroup(g){
     if(!o){toast('至少需要保留一个未分组的标签页才能收起此群组');return}
     activate(o);
   }
-  g.collapsed=!g.collapsed;renderGroups();
+  g.collapsed=!g.collapsed;renderGroups();saveSession();
 }
 function groupMenu(g,x,y){
   const ic=p=>svg(p,20);
@@ -1521,14 +1521,14 @@ function groupMenu(g,x,y){
     {custom:m=>{
       const w=el(`<div class="gedit"><input class="gname" maxlength="40" placeholder="为群组命名" spellcheck="false" aria-label="群组名称"><div class="gcols"></div></div>`);
       const inp=$('input',w);inp.value=g.name||'';
-      inp.addEventListener('input',()=>{g.name=inp.value;renderGroups()});
+      inp.addEventListener('input',()=>{g.name=inp.value;renderGroups();saveSession()});
       inp.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Enter'||e.key==='Escape')closePopups()});
       const cs=$('.gcols',w);
       Object.keys(GCOL).forEach(k=>{const b=el(`<button class="gsw${k===g.color?' on':''}" title="${GCN[k]}" style="--c:${GCOL[k]}"></button>`);
-        b.onclick=()=>{g.color=k;renderGroups();$$('.gsw',w).forEach(q=>q.classList.toggle('on',q===b))};cs.append(b)});
+        b.onclick=()=>{g.color=k;renderGroups();saveSession();$$('.gsw',w).forEach(q=>q.classList.toggle('on',q===b))};cs.append(b)});
       setTimeout(()=>inp.focus(),30);return w}},
     '-',
-    {label:'在群组中新建标签页',icon:ic(P.add),fn:()=>{const ms=groupMembers(g.id);const t=newTab(null,{index:tabs.indexOf(ms[ms.length-1])+1});t.group=g.id;g.collapsed=false;renderTabs()}},
+    {label:'在群组中新建标签页',icon:ic(P.add),fn:()=>{const ms=groupMembers(g.id);const t=newTab(null,{index:tabs.indexOf(ms[ms.length-1])+1});t.group=g.id;g.collapsed=false;renderTabs();saveSession()}},
     {label:'取消分组',icon:ic(P.close),fn:()=>{groupMembers(g.id).forEach(t=>t.group=null);renderTabs();saveSession()}},
     {label:'关闭群组',icon:ic(P.del),fn:()=>{groupMembers(g.id).forEach(t=>closeTab(t))}}
   ],x,y);
@@ -1546,8 +1546,8 @@ function flipSibs(sibs,mut){
   });
 }
 function startDrag(e,te){
-  let sx=e.clientX;const sx0=sx,sy0=e.clientY;let moved=false;
-  const live=()=>[...tabsEl.children].filter(x=>x.classList.contains('tab')&&!x.classList.contains('closing'));
+  let sx=e.clientX;const sx0=sx,sy0=e.clientY,t0=byId(te.dataset.id),pin0=!!(t0&&t0.pinned);let moved=false;
+  const live=()=>[...tabsEl.children].filter(x=>x.classList.contains('tab')&&!x.classList.contains('closing')&&!x.classList.contains('gcol')&&x.classList.contains('pinned')===pin0);
   const clamp=d=>Math.max(-te.offsetLeft,Math.min(d,tabsEl.clientWidth-te.offsetWidth-te.offsetLeft));
   const mm=ev=>{
     if(!moved){if(Math.hypot(ev.clientX-sx0,ev.clientY-sy0)<5)return;moved=true;te.style.transition='none';te.classList.add('drag');content.style.pointerEvents='none'}
@@ -1558,7 +1558,8 @@ function startDrag(e,te){
     const n=sibs.filter(x=>x.offsetLeft+x.offsetWidth/2<cx).length;
     if(n!==live().indexOf(te)){
       const L0=te.offsetLeft;
-      flipSibs(sibs,()=>tabsEl.insertBefore(te,sibs[n]||null));
+      const ref=sibs[n]||(pin0?[...tabsEl.children].find(x=>x.classList.contains('tab')&&!x.classList.contains('pinned')):null)||null;
+      flipSibs(sibs,()=>tabsEl.insertBefore(te,ref));
       sx+=(te.offsetLeft-L0);dx=clamp(ev.clientX-sx);te.style.transform=`translateX(${dx}px)`;
     }
   };
@@ -1567,6 +1568,7 @@ function startDrag(e,te){
     if(moved){
       te.style.transition='transform .18s cubic-bezier(.2,0,0,1)';te.style.transform='';
       setTimeout(()=>{te.classList.remove('drag');te.style.transition=''},190);
+      Object.values(groups).forEach(g=>{if(g.collapsed&&g.el&&g.el.isConnected){let a=g.el;tabs.filter(x=>x.group===g.id&&x.el).forEach(x=>{a.after(x.el);a=x.el})}});
       tabs=[...tabsEl.children].map(x=>byId(x.dataset.id)).filter(Boolean);regroupAfterDrag(te);renderGroups();saveSession();
     }else{te.style.transform='';te.classList.remove('drag')}
   };
@@ -1589,7 +1591,7 @@ function showHC(te){
 tabsEl.addEventListener('mouseover',e=>{const te=e.target.closest('.tab');if(!te||te===hcTab||te.classList.contains('drag'))return;hcTab=te;clearTimeout(hcT);hcT=setTimeout(()=>showHC(te),hcard.hidden?500:50)});
 tabsEl.addEventListener('mouseleave',hideHC);
 tabsEl.addEventListener('mousedown',hideHC,true);
-function saveSession(){if(INC||!tabs.length)return;store.set(SK,tabs.map(t=>({url:t.url,pinned:t.pinned,g:t.group||undefined})));store.set(GK,Object.fromEntries(Object.values(groups).map(g=>[g.id,{id:g.id,name:g.name,color:g.color,collapsed:false}])))}
+function saveSession(){if(INC||!tabs.length)return;store.set(SK,tabs.map(t=>({url:t.url,pinned:t.pinned,g:t.group||undefined})));store.set(GK,Object.fromEntries(Object.values(groups).map(g=>[g.id,{id:g.id,name:g.name,color:g.color,collapsed:!!g.collapsed}])))}
 
 /* ============ 导航 ============ */
 const BLOCKED=/(^|\.)(google\.[a-z.]+|youtube\.com|facebook\.com|instagram\.com|twitter\.com|x\.com|github\.com|linkedin\.com|reddit\.com|netflix\.com|amazon\.[a-z.]+|paypal\.com|tiktok\.com|discord\.com|twitch\.tv|pinterest\.com|whatsapp\.com|openai\.com|chatgpt\.com|apple\.com)$/i;
