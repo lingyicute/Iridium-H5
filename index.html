@@ -1646,7 +1646,7 @@ function load(t,url){
   }
   applyZoom(t);fillTab(t);if(t===activeTab)updateUI();saveSession();
 }
-function setTitle(t,title){t.title=title;if(t.hist[t.idx])t.hist[t.idx].title=title;fillTab(t);if(t===activeTab)document.title=title+' - Iridium'}
+function setTitle(t,title){t.title=title;if(t.hist[t.idx])t.hist[t.idx].title=title;fillTab(t);if(t===activeTab)document.title=(INC?'(无痕) ':'')+title+' - Iridium'}
 function reload(t){if(!t)return;if(t.kind==='web'&&t.frame){const f=t.frame;clearTimeout(t._lt);t.loading=true;if(typeof sbKey!=='undefined')sbKey='';t._lt=setTimeout(()=>{if(t.frame===f&&t.loading){t.loading=false;fillTab(t);if(t===activeTab)updateUI()}},25000);f.src=t.url;fillTab(t);updateUI()}else load(t,t.url)}
 function stop(t){if(t&&t.loading){clearTimeout(t._lt);t.loading=false;try{t.frame.contentWindow.stop()}catch(e){}fillTab(t);updateUI()}}
 function goBack(t){if(t.idx>0){t.idx--;load(t,t.hist[t.idx].url)}}
