@@ -3277,7 +3277,7 @@ const isDl=u=>{try{const x=new URL(u);return /^https?:$/.test(x.protocol)&&EXT.t
 const _go=go;
 go=function(t,input,opt){
   const url=resolve(input);
-  if(isDl(url)&&netOn()&&!BLOCKED.test(hostOf(url))){start(url);updateUI();return}
+  if(isDl(url)&&netOn()&&!BLOCKED.test(hostOf(url))){start(url);if(t&&!t.url)_go.call(this,t,'chrome://newtab/');updateUI();return}
   return _go.apply(this,arguments);
 };
 const dlA=$('#extBtn');
