@@ -2488,7 +2488,7 @@ if(INC){const ic=$('#incchip');ic.hidden=false;ic.innerHTML=svg(P.inc,18)+'无�
 /* ============ 快捷键 ============ */
 document.addEventListener('keydown',e=>{
   if(!win.open||win.min||document.body.classList.contains('locked'))return;
-  const c=e.ctrlKey||e.metaKey,k=e.key.toLowerCase(),t=cur();
+  const c=e.ctrlKey||e.metaKey,k=(e.key||'').toLowerCase(),t=cur();
   const stop=()=>{e.preventDefault();e.stopPropagation()};
   if(c&&!e.shiftKey&&k==='t'){stop();newTab()}
   else if(c&&!e.shiftKey&&k==='w'){stop();t&&closeTab(t)}
@@ -2923,7 +2923,7 @@ function statusBubble(t){
   /* 补全 Chromium 常用快捷键 */
   document.addEventListener('keydown',e=>{
     if(!win.open||win.min||document.body.classList.contains('locked')||e.defaultPrevented)return;
-    const c=e.ctrlKey||e.metaKey,k=e.key.toLowerCase(),t=cur();if(!t)return;
+    const c=e.ctrlKey||e.metaKey,k=(e.key||'').toLowerCase(),t=cur();if(!t)return;
     const eat=()=>{e.preventDefault();e.stopPropagation()};
     if((c&&e.shiftKey&&k==='r')||(c&&e.key==='F5')){eat();t.kind==='web'&&t.frame?reload(t):load(t,t.url)}
     else if(c&&e.shiftKey&&k==='w'){eat();closeWindow()}
