@@ -1921,6 +1921,7 @@ function editBookmark(node,init={}){
 }
 function findIn(folder,id){let r=false;walk(folder.children,n=>{if(n.id===id)r=true});return r}
 function bookmarkBubble(t){
+  if(!t||!t.url||/^chrome:\/\/newtab/.test(t.url))return;
   let n=findByUrl(t.url);if(!n){n={id:uid(),type:'url',title:t.title,url:t.url};BM.bar.push(n);saveBM()}
   const b=el(`<div><h3>${'已添加书签'}</h3><label class="fld"><span>名称</span><input id="bbn" value="${esc(n.title)}"></label><label class="fld"><span>文件夹</span><select id="bbf">${folderOptions(parentOf(n.id))}</select></label><div class="brow"><button class="btn" id="bbr">移除</button><button class="btn pri" id="bbd">完成</button></div></div>`);
   showBubble(b,$('#star'),'star');
