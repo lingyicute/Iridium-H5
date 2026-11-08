@@ -1494,11 +1494,12 @@ function moveAfterGroup(t,gid){
   const ms=groupMembers(gid).filter(x=>x!==t);if(!ms.length)return;
   tabs.splice(tabs.indexOf(t),1);tabs.splice(tabs.indexOf(ms[ms.length-1])+1,0,t);
 }
-function addToGroup(t,gid){t.group=gid;moveAfterGroup(t,gid);if(groups[gid])groups[gid].collapsed=false;renderTabs();saveSession()}
+function addToGroup(t,gid){if(t.pinned)return;t.group=gid;moveAfterGroup(t,gid);if(groups[gid])groups[gid].collapsed=false;renderTabs();saveSession()}
 function ungroup(t){const gid=t.group;if(!gid)return;t.group=null;
   const ms=groupMembers(gid);if(ms.length){tabs.splice(tabs.indexOf(t),1);tabs.splice(tabs.indexOf(ms[ms.length-1])+1,0,t)}
   renderTabs();saveSession()}
 function newGroup(t){
+  if(!t||t.pinned){toast('固定的标签页无法加入群组');return}
   const used=new Set(Object.values(groups).map(g=>g.color)),keys=Object.keys(GCOL),free=keys.filter(k=>!used.has(k)),pool=free.length?free:keys;
   const g={id:uid(),name:'',color:pool[Math.floor(Math.random()*pool.length)],collapsed:false};
   groups[g.id]=g;t.group=g.id;renderTabs();saveSession();
