@@ -1209,7 +1209,8 @@ const ENGINES={
 };
 const defS={theme:'system',showBm:true,showHome:false,engine:'iridium',startup:'ntp',startupUrl:'',dnt:false,ntpBg:'',flags:{},devMode:false,accent:'default',showTiles:true,
   shortcuts:[{t:'维基百科',u:'https://zh.wikipedia.org/'},{t:'Example Domain',u:'https://example.com/'},{t:'MDN Web Docs',u:'https://developer.mozilla.org/zh-CN/'},{t:'OpenStreetMap',u:'https://www.openstreetmap.org/'},{t:'W3C',u:'https://www.w3.org/'}]};
-let S=Object.assign({},defS,store.get('settings',{}));
+const freshS=extra=>{const c=JSON.parse(JSON.stringify(defS)),o=Object.assign(c,extra);if(!o.flags||typeof o.flags!=='object')o.flags={};if(!Array.isArray(o.shortcuts))o.shortcuts=c.shortcuts;return o};
+let S=freshS(store.get('settings',{}));
 const saveS=()=>store.set('settings',S);
 let BM=store.get('bm',null)||{bar:[
   {id:uid(),type:'url',title:'维基百科',url:'https://zh.wikipedia.org/'},
@@ -2297,7 +2298,7 @@ function pageSettings(t,u){
     if(e.target.closest('[data-soon]')){toast('此设置在当前版本中暂不可用');return}
     const cv=e.target.closest('.srow.chev');if(cv){toast('此设置在当前版本中暂不可用');return}
     const db=e.target.closest('[data-defb]');if(db){S.isDefault=true;saveS();db.replaceWith(el('<span style="color:var(--text2);font-size:13px">Iridium 已是默认浏览器</span>'));toast('已将 Iridium 设为默认浏览器');return}
-    const rs=e.target.closest('[data-reset]');if(rs){dialog('重置设置','此操作会将启动页面、新标签页、搜索引擎和固定标签页等设置恢复为默认值，并停用所有扩展程序。您的书签、历史记录和已保存的密码不会被清除。',[{text:'取消'},{text:'重置设置',pri:true,fn:()=>{S=Object.assign({},defS);saveS();applySettings();refreshNtps();toast('设置已重置');setTimeout(()=>reload(t),160)}}]);return}
+    const rs=e.target.closest('[data-reset]');if(rs){dialog('重置设置','此操作会将启动页面、新标签页、搜索引擎和固定标签页等设置恢复为默认值，并停用所有扩展程序。您的书签、历史记录和已保存的密码不会被清除。',[{text:'取消'},{text:'重置设置',pri:true,fn:()=>{S=freshS();saveS();applySettings();refreshNtps();toast('设置已重置');setTimeout(()=>reload(t),160)}}]);return}
     const c=e.target.closest('[data-clear]');if(c){clearDataDialog();return}
     const n=e.target.closest('[data-ntp]');if(n){openCustomize();return}
   });
@@ -3290,7 +3291,7 @@ render();
     if(!e.key||e.key.indexOf('iridium.')!==0)return;
     const k=e.key.slice(8);
     try{
-      if(k==='settings'){S=Object.assign({},defS,store.get('settings',{}));applySettings()}
+      if(k==='settings'){S=freshS(store.get('settings',{}));applySettings()}
       else if(k==='os'){Object.assign(OS,store.get('os',{}));applyOS();applySettings()}
       else if(EMB&&k==='bm'){BM=store.get('bm',BM);onDataChange()}
       else if(EMB&&k==='hist'&&!INC){HIST=store.get('hist',HIST)}
