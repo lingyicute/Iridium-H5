@@ -1706,6 +1706,7 @@ let kw=null;const PH=$('#url').placeholder;
 const KWS=[{k:'@bookmarks',zh:'@书签',id:'bm',label:'搜索书签',icon:P.star},{k:'@history',zh:'@历史记录',id:'hist',label:'搜索历史记录',icon:P.history},{k:'@tabs',zh:'@标签页',id:'tabs',label:'搜索标签页',icon:P.win}];
 function setKw(k){kw=k;const c=$('#kwchip');c.textContent=k.label;c.hidden=false;urlIn.value='';urlIn.placeholder='';typed='';refreshSugg()}
 function clearKw(){if(!kw)return;kw=null;$('#kwchip').hidden=true;urlIn.placeholder=PH}
+const sgVal=s=>s.type==='search'&&s.value[0]!=='?'?'?'+s.value:s.value;
 function selVal(){const s=sgItems[sgSel];return sgSel<0||!s||s.type==='tab'?typed:s.value}
 function pick(i,ctrl){
   const s=i>=0?sgItems[i]:null;
@@ -1715,7 +1716,7 @@ function pick(i,ctrl){
     if(kw.id==='bm')return commit('chrome://bookmarks/?q='+encodeURIComponent(q),ctrl);
     if(kw.id==='hist')return commit('chrome://history/?q='+encodeURIComponent(q),ctrl);
     const m=tabs.find(t=>!q||(t.title+' '+t.url).toLowerCase().includes(ql));if(m){hideSugg();urlIn.blur();activate(m)}return}
-  commit(s?s.value:urlIn.value,ctrl);
+  commit(s?sgVal(s):urlIn.value,ctrl);
 }
 function hideSugg(){sugg.hidden=true;sgSel=-1;$('#omnibox').classList.remove('open')}
 function buildSugg(q){
@@ -1792,7 +1793,7 @@ urlIn.addEventListener('keydown',e=>{
     drawSugg();urlIn.value=selVal();
   }else if(e.key==='Enter'){
     e.preventDefault();{const sx=sgSel>=0?sgItems[sgSel]:null,v0=urlIn.value.trim();if(kw||(sx&&(sx.type==='kw'||sx.type==='tab'))||(!sx&&sgItems[0]&&sgItems[0].type==='kw'&&v0[0]==='@'&&!/\s/.test(v0))){pick(sx?sgSel:(kw?-1:0),e.altKey);return}}
-    let v=sgSel>=0?sgItems[sgSel].value:urlIn.value;if((e.ctrlKey||e.metaKey)&&sgSel<0&&/^[a-z0-9-]+$/i.test(v.trim()))v='www.'+v.trim()+'.com';commit(v,e.altKey);
+    let v=sgSel>=0?sgVal(sgItems[sgSel]):urlIn.value;if((e.ctrlKey||e.metaKey)&&sgSel<0&&/^[a-z0-9-]+$/i.test(v.trim()))v='www.'+v.trim()+'.com';commit(v,e.altKey);
   }else if(e.key==='Delete'&&e.shiftKey&&sgSel>=0&&sgItems[sgSel]&&sgItems[sgSel].type==='hist'){
     e.preventDefault();const s0=sgItems[sgSel];HIST=HIST.filter(h=>h.url!==s0.value);saveH();onDataChange();const keep=sgSel;sgItems.splice(keep,1);sgSel=Math.min(keep,sgItems.length-1);drawSugg();urlIn.value=selVal();
   }else if(e.key==='Backspace'&&kw&&!urlIn.value){
