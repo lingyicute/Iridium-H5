@@ -1389,7 +1389,7 @@ function activate(t){
   if(t.group&&groups[t.group])groups[t.group].collapsed=false;
   tabs.forEach(fillTab);renderGroups();applyZoom(t);updateUI();$('#findbar').hidden=true;
 }
-function pushClosed(t,i){clearTimeout(t._lt);if(t.el)try{tro.unobserve(t.el)}catch(e){}if(t.url&&!/^chrome:\/\/newtab/.test(t.url))closedStack.push({url:t.url,title:t.title||'',pinned:t.pinned,index:i})}
+function pushClosed(t,i){clearTimeout(t._lt);if(t.el)try{tro.unobserve(t.el)}catch(e){}if(t.url&&!/^chrome:\/\/newtab/.test(t.url)){closedStack.push({url:t.url,title:t.title||'',pinned:t.pinned,index:i});if(closedStack.length>25)closedStack.shift()}}
 function closeTab(t,fromMouse){
   const i=tabs.indexOf(t);if(i<0)return;
   pushClosed(t,i);
