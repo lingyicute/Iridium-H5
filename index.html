@@ -1121,6 +1121,7 @@ const QP=new URLSearchParams(location.search);
 const EMB=QP.has('embed')&&window.parent!==window;
 const WID=QP.get('wid')||'main';
 const INC=EMB&&QP.has('incognito');
+const MSG_ORIGIN=location.origin==='null'?'*':location.origin;
 const SK=EMB?'session.'+WID:'session',GK=EMB?'groups.'+WID:'groups';
 document.documentElement.classList.toggle('emb',EMB);document.body.classList.add(EMB?'emb':'host');
 const $=(s,r=document)=>r.querySelector(s);
@@ -3305,7 +3306,7 @@ render();
 /* ============ 多窗口：内嵌窗口桥接 (每个浏览器窗口 = 一个独立的 Iridium 实例，由桌面窗口管理器统一管理) ============ */
 (function(){
   if(!EMB)return;
-  const post=(t,o)=>{try{parent.postMessage(Object.assign({iri:1,wid:WID,t:t},o||{}),'*')}catch(e){}};
+  const post=(t,o)=>{try{parent.postMessage(Object.assign({iri:1,wid:WID,t:t},o||{}),MSG_ORIGIN)}catch(e){}};
   const IWM=window.IWM={post,wins:[],tabMenuItems,tryDetach,snapBubble,exportTab,adoptTab};
 
   /* ---- 向窗口管理器同步标题 / 标签页数量 ---- */
@@ -3405,7 +3406,7 @@ render();
     syncWin();
   }
   addEventListener('message',e=>{
-    if(e.source!==parent)return;const m=e.data;if(!m||m.iri!==1)return;
+    if(e.source!==parent||(MSG_ORIGIN!=='*'&&e.origin!==MSG_ORIGIN))return;const m=e.data;if(!m||m.iri!==1)return;
     switch(m.t){
       case 'init':
         applyState(m.state||{max:true,focus:true});
@@ -3480,7 +3481,7 @@ render();
     if(!sh||!sh.width)return{dx:0,dy:Math.min(60,innerHeight*.08),sc:.9,r:r};
     return{dx:sh.left+sh.width/2-(r.left+r.width/2),dy:sh.top+sh.height/2-(r.top+r.height/2),sc:Math.max(.06,Math.min(.2,44/Math.max(r.width,1))),r:r};
   }
-  const send=(w,t,o)=>{try{w.ifr.contentWindow.postMessage(Object.assign({iri:1,t:t},o||{}),'*')}catch(e){}};
+  const send=(w,t,o)=>{try{w.ifr.contentWindow.postMessage(Object.assign({iri:1,t:t},o||{}),MSG_ORIGIN)}catch(e){}};
   const state=w=>({max:w.max,fs:w.fs,focus:focus===w.id,min:w.min});
   function push(w){
     w.fr.classList.toggle('max',w.max&&!w.fs);w.fr.classList.toggle('fs',w.fs);w.fr.classList.toggle('blur',focus!==w.id);
@@ -3815,7 +3816,7 @@ render();
   /* ---------- 来自各窗口的消息 ---------- */
   addEventListener('message',e=>{
     const m=e.data;if(!m||m.iri!==1)return;
-    const w=byId(m.wid);if(!w||e.source!==w.ifr.contentWindow)return;
+    const w=byId(m.wid);if(!w||e.source!==w.ifr.contentWindow||(MSG_ORIGIN!=='*'&&e.origin!==MSG_ORIGIN))return;
     switch(m.t){
       case 'ready':
         w.ready=true;
