@@ -3247,7 +3247,7 @@ async function start(url,name){
   const firstOpen=!btn.classList.contains('gone')||true;
   render();setTimeout(()=>{if(!layer.dataset.owner||layer.dataset.owner==='dl'){if(!bub)openBubble()}},60);
   d.lt=performance.now();d.lg=0;
-  const tick=setInterval(()=>{if(d.state!=='prog'){clearInterval(tick);return}const n=performance.now(),dt=(n-d.lt)/1000;if(dt>=.5){const inst=(d.got-d.lg)/dt;d.speed=d.speed?d.speed*.6+inst*.4:inst;d.lt=n;d.lg=d.got}render()},500);
+  const tick=setInterval(()=>{if(d.state==='pause')return;if(d.state!=='prog'){clearInterval(tick);return}const n=performance.now(),dt=(n-d.lt)/1000;if(dt>=.5){const inst=(d.got-d.lg)/dt;d.speed=d.speed?d.speed*.6+inst*.4:inst;d.lt=n;d.lg=d.got}render()},500);
   try{
     const r=await fetch(url,{signal:L.ctl.signal,mode:'cors',credentials:'omit'});
     if(!r.ok){d.msg=r.status===404?'无此文件':r.status===403||r.status===401?'已禁止':'服务器问题';throw new Error('HTTP '+r.status)}
