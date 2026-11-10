@@ -2404,7 +2404,7 @@ function dino(cv){
     score+=spd/40;spd+=0.0012;next--;
     if(next<=0){obs.push({x:W,w:14+Math.random()*14,h:28+Math.random()*20});next=55+Math.random()*60-spd}
     obs.forEach(o=>o.x-=spd);obs=obs.filter(o=>o.x+o.w>0);
-    const dx1=40,dx2=76,dt=H-20-44-y,db=H-20-y;
+    const dx1=40,dx2=76,db=H-20-y;
     for(const o of obs){if(o.x<dx2-4&&o.x+o.w>dx1+4&&db>H-20-o.h+4){over=true;if(score>hi){hi=score;store.set('dinohi',Math.floor(hi))}}}
   }
   function draw(){
@@ -3314,7 +3314,6 @@ function saveToHost(href,name,blank){const a=document.createElement('a');a.href=
 async function start(url,name){
   const d={id:'d'+Date.now()+(seq++),name:name||nameOf(url),url,size:0,got:0,state:'prog',ts:Date.now(),speed:0};
   DL.unshift(d);const L=live[d.id]={ctl:new AbortController()};
-  const firstOpen=!btn.classList.contains('gone')||true;
   render();setTimeout(()=>{if(!layer.dataset.owner||layer.dataset.owner==='dl'){if(!bub)openBubble()}},60);
   d.lt=performance.now();d.lg=0;
   const tick=setInterval(()=>{if(d.state==='pause')return;if(d.state!=='prog'){clearInterval(tick);return}const n=performance.now(),dt=(n-d.lt)/1000;if(dt>=.5){const inst=(d.got-d.lg)/dt;d.speed=d.speed?d.speed*.6+inst*.4:inst;d.lt=n;d.lg=d.got}render()},500);
@@ -3350,7 +3349,6 @@ go=function(t,input,opt){
   if(isDl(url)&&netOn()&&!BLOCKED.test(hostOf(url))){start(url);if(t&&!t.url)_go.call(this,t,'chrome://newtab/');updateUI();return}
   return _go.apply(this,arguments);
 };
-const dlA=$('#extBtn');
 document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target===btn)btn.click()});
 render();
 })();
