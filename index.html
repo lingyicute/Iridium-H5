@@ -1208,7 +1208,7 @@ const ENGINES={
   baidu:{name:'百度',url:'https://www.baidu.com/s?wd=%s'},
   wiki:{name:'维基百科',url:'https://zh.wikipedia.org/w/index.php?search=%s'}
 };
-const defS={theme:'system',showBm:true,showHome:false,engine:'iridium',startup:'ntp',startupUrl:'',dnt:false,ntpBg:'',flags:{},devMode:false,accent:'default',showTiles:true,
+const defS={theme:'system',showBm:true,showHome:false,engine:'iridium',startup:'ntp',startupUrl:'',dnt:false,ntpBg:'',flags:{},devMode:false,accent:'default',showTiles:true,pageZoom:'100',
   shortcuts:[{t:'维基百科',u:'https://zh.wikipedia.org/'},{t:'Example Domain',u:'https://example.com/'},{t:'MDN Web Docs',u:'https://developer.mozilla.org/zh-CN/'},{t:'OpenStreetMap',u:'https://www.openstreetmap.org/'},{t:'W3C',u:'https://www.w3.org/'}]};
 const freshS=extra=>{const c=JSON.parse(JSON.stringify(defS)),o=Object.assign(c,extra);if(!o.flags||typeof o.flags!=='object')o.flags={};if(!Array.isArray(o.shortcuts))o.shortcuts=c.shortcuts;return o};
 let S=freshS(store.get('settings',{}));
@@ -1375,7 +1375,7 @@ const tabsEl=$('#tabs'),content=$('#content');
 const cur=()=>activeTab;
 const byId=id=>tabs.find(t=>t.id===id);
 function newTab(url,opt={}){
-  const t={id:uid(),group:null,url:'',title:'新标签页',hist:[],idx:-1,loading:false,pinned:!!opt.pinned,zoom:1,view:document.createElement('div'),frame:null,kind:'blank',favKey:null,_new:true};
+  const t={id:uid(),group:null,url:'',title:'新标签页',hist:[],idx:-1,loading:false,pinned:!!opt.pinned,zoom:(+S.pageZoom||100)/100,view:document.createElement('div'),frame:null,kind:'blank',favKey:null,_new:true};
   t.view.className='tabview';t.view.style.display='none';content.insertBefore(t.view,$('#findbar'));
   const at=opt.index!=null?opt.index:(opt.afterActive&&activeTab?tabs.indexOf(activeTab)+1:tabs.length);
   unlockTabs();tabs.splice(at,0,t);renderTabs();
@@ -1618,6 +1618,7 @@ function isInternal(url){return /^(chrome|chrome-search):/i.test(url)}
 function hostOf(url){try{return new URL(url).hostname}catch(e){return url}}
 function go(t,input,opt={}){
   const url=resolve(input);
+  if(/^chrome:\/\/os-settings/i.test(url)){const sec=url.replace(/^chrome:\/\/os-settings\/?/i,'').split(/[/?#]/)[0];openOsSettings(sec);if(t&&!t.url)load(t,'chrome://newtab/');else updateUI();return}
   t.hist=t.hist.slice(0,t.idx+1);t.hist.push({url,title:''});t.idx=t.hist.length-1;
   load(t,url);
 }
@@ -2199,12 +2200,8 @@ function pageFlags(t){
   return root;
 }
 function hostInfo(){
-  const ua=navigator.userAgent,pl=((navigator.userAgentData&&navigator.userAgentData.platform)||navigator.platform||'')+' '+ua;
   const tail=` AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${CHROME_MAJOR}.0.0.0 Safari/537.36`;
-  if(/CrOS/i.test(pl))return{os:'IridiumOS 16093.57.0 (正式版本) stable-channel brya',ua:'Mozilla/5.0 (X11; CrOS x86_64 16093.57.0)'+tail,exe:'/opt/google/chrome/chrome',prof:'/home/chronos/u-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b/Default',cmd:'/opt/google/chrome/chrome --ash-enable-shelf',tag:'IridiumOS'};
-  if(/Win/i.test(pl))return{os:'Windows 11 Version 24H2 (Build 26100.4946)',ua:'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'+tail,exe:'C:\\Program Files\\Iridium\\Application\\iridium.exe',prof:'C:\\Users\\User\\AppData\\Local\\Iridium\\User Data\\Default',cmd:'"C:\\Program Files\\Iridium\\Application\\iridium.exe"',tag:'Windows'};
-  if(/Mac/i.test(pl))return{os:'macOS Version 15.6.1 (Build 24G90)',ua:'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'+tail,exe:'/Applications/Iridium.app/Contents/MacOS/Iridium',prof:'/Users/user/Library/Application Support/Iridium/Default',cmd:'/Applications/Iridium.app/Contents/MacOS/Iridium',tag:'macOS'};
-  return{os:'Linux 6.12.41-1-lts',ua:'Mozilla/5.0 (X11; Linux x86_64)'+tail,exe:'/usr/lib/iridium/iridium',prof:'/home/user/.config/iridium/Default',cmd:'/usr/lib/iridium/iridium',tag:'Linux'};
+  return{os:'IridiumOS 16093.57.0 (正式版本) stable-channel brya',ua:'Mozilla/5.0 (X11; CrOS x86_64 16093.57.0)'+tail,exe:'/opt/google/chrome/chrome',prof:'/home/chronos/u-0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b/Default',cmd:'/opt/google/chrome/chrome --ash-enable-shelf',tag:'IridiumOS'};
 }
 function pageVersion(t){
   t.title='关于版本信息';
@@ -2234,7 +2231,7 @@ function pageVersion(t){
 }
 function pageAbout(t){
   t.title='Chrome 网址列表';
-  const list=['about','bookmarks','credits','dino','downloads','extensions','flags','history','management','newtab','password-manager','settings','version'];
+  const list=['about','bookmarks','credits','dino','downloads','extensions','flags','history','management','newtab','os-settings','password-manager','settings','version'];
   const dbg=['crash','kill','hang','shorthang','gpuclean','gpucrash','gpuhang','memory-exhaust','ppapiflashcrash'];
   return el(`<div class="pg ver"><div class="vwrap"><h1 class="uh">Chrome 网址列表</h1><div class="ul">${list.map(x=>`<div><a data-url="chrome://${x}/">chrome://${x}</a></div>`).join('')}</div><h2 class="uh2">仅供调试使用</h2><p class="ud">以下网址仅用于调试目的。为避免误触，它们不会被直接打开。</p><div class="ul dbg">${dbg.map(x=>`<div>chrome://${x}</div>`).join('')}</div></div></div>`);
 }
@@ -2268,10 +2265,10 @@ function pageSearch(t,u){
 function pageSettings(t,u){
   t.title='设置';
   let sec=(u.pathname||'').replace(/^\/+|\/+$/g,'')||'people';if(sec==='about')sec='help';
-  const secs=[['people','您和 Iridium'],['autofill','自动填充和密码'],['privacy','隐私和安全'],['performance','性能'],['appearance','外观'],['search','搜索引擎'],['browser','默认浏览器'],['onStartup','启动时'],['languages','语言'],['downloads','下载内容'],['a11y','无障碍'],['system','系统'],['reset','重置设置'],['help','关于 Iridium']];
+  const secs=[['people','您和 Iridium'],['autofill','自动填充和密码'],['privacy','隐私和安全'],['performance','性能'],['appearance','外观'],['search','搜索引擎'],['onStartup','启动时'],['languages','语言'],['downloads','下载内容'],['a11y','无障碍'],['reset','重置设置'],['help','关于 Iridium']];
   if(!secs.some(s=>s[0]===sec))sec='people';
   const ICO=d=>svg(d,20);
-  const icons={people:IRI(20),autofill:svg(P.keyp,20),privacy:svg(P.lock,20),performance:ICO('M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z'),appearance:svg(P.edit,20),search:svg(P.search,20),browser:ICO('M20 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 14H4V8h16v10z'),onStartup:svg(P.reload,20),languages:ICO('M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z'),downloads:svg(P.dl,20),a11y:ICO('M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z'),system:ICO('M20 18c1.1 0 1.99-.9 1.99-2L22 6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2H0v2h24v-2h-4zM4 6h16v10H4V6z'),reset:svg(P.history,20),help:svg(P.info,20)};
+  const icons={people:IRI(20),autofill:svg(P.keyp,20),privacy:svg(P.lock,20),performance:ICO('M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.27-10.44zm-9.79 6.84a2 2 0 0 0 2.83 0l5.66-8.49-8.49 5.66a2 2 0 0 0 0 2.83z'),appearance:svg(P.edit,20),search:svg(P.search,20),onStartup:svg(P.reload,20),languages:ICO('M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zm6.93 6h-2.95a15.65 15.65 0 0 0-1.38-3.56A8.03 8.03 0 0 1 18.92 8zM12 4.04c.83 1.2 1.48 2.53 1.91 3.96h-3.82c.43-1.43 1.08-2.76 1.91-3.96zM4.26 14C4.1 13.36 4 12.69 4 12s.1-1.36.26-2h3.38c-.08.66-.14 1.32-.14 2 0 .68.06 1.34.14 2H4.26zm.82 2h2.95c.32 1.25.78 2.45 1.38 3.56A7.987 7.987 0 0 1 5.08 16zm2.95-8H5.08a7.987 7.987 0 0 1 4.33-3.56A15.65 15.65 0 0 0 8.03 8zM12 19.96c-.83-1.2-1.48-2.53-1.91-3.96h3.82c-.43 1.43-1.08 2.76-1.91 3.96zM14.34 14H9.66c-.09-.66-.16-1.32-.16-2 0-.68.07-1.35.16-2h4.68c.09.65.16 1.32.16 2 0 .68-.07 1.34-.16 2zm.25 5.56c.6-1.11 1.06-2.31 1.38-3.56h2.95a8.03 8.03 0 0 1-4.33 3.56zM16.36 14c.08-.66.14-1.32.14-2 0-.68-.06-1.34-.14-2h3.38c.16.64.26 1.31.26 2s-.1 1.36-.26 2h-3.38z'),downloads:svg(P.dl,20),a11y:ICO('M12 2c1.1 0 2 .9 2 2s-.9 2-2 2-2-.9-2-2 .9-2 2-2zm9 7h-6v13h-2v-6h-2v6H9V9H3V7h18v2z'),reset:svg(P.history,20),help:svg(P.info,20)};
   const tg=(k,v)=>`<label class="sw"><input type="checkbox" data-k="${k}" ${v?'checked':''}><span></span></label>`;
   const sel=(k,opts,cur)=>`<select data-k="${k}">${opts.map(o=>`<option value="${o[0]}"${String(cur)===o[0]?' selected':''}>${o[1]}</option>`).join('')}</select>`;
   const row=(a,b,c,link)=>`<div class="srow${link?' link':''}${link===null&&!c?' chev':''}" ${link?`data-go="${link}"`:''}><div class="stx"><div class="st">${a}</div>${b?`<div class="sd">${b}</div>`:''}</div><div class="rc">${c||((link||link===null)?I.chev:'')}</div></div>`;
@@ -2283,25 +2280,25 @@ function pageSettings(t,u){
 <section data-s="privacy"><h2 class="big">隐私和安全</h2><div class="card">${row('清除浏览数据','清除历史记录、Cookie、缓存及其他数据','<button class="btn" data-clear="1">清除数据</button>')}${row('隐私指南','查看关键的隐私和安全控制选项','',null)}${row('第三方 Cookie','已在无痕模式下屏蔽第三方 Cookie','',null)}${row('广告隐私','自定义网站可用来向您展示广告的信息','',null)}${row('安全','安全浏览（保护您免受危险网站的侵害）及其他安全设置','',null)}${row('网站设置','控制网站可以使用和显示的信息（位置信息、摄像头、弹出式窗口及其他）','',null)}${row('随浏览流量发送“不跟踪”请求','',tg('dnt',S.dnt))}</div></section>
 <section data-s="autofill"><h2 class="big">自动填充和密码</h2><div class="card">${row('密码管理工具','保存、查看和管理您的密码和通行密钥','','chrome://password-manager/')}${row('付款方式','','',null)}${row('地址和其他信息','','',null)}</div></section>
 <section data-s="performance"><h2 class="big">性能</h2><div class="card"><div class="hd">内存</div>${row('内存节省程序','不使用的标签页处于未活动状态时，Iridium 会释放其占用的内存，从而让其他标签页和应用保持流畅运行。',tg('memorySaver',S.memorySaver!==false))}</div><div class="card"><div class="hd">省电</div>${row('节能模式','启用后，Iridium 会通过限制后台活动和视觉效果来节省电量。',sel('energy',[['off','关闭'],['unplugged','电池电量降至 20% 及以下时开启'],['on','始终开启']],S.energy||'unplugged'))}</div><div class="card"><div class="hd">速度</div>${row('预加载网页','Iridium 会预加载您可能访问的网页，以加快浏览和搜索速度。',tg('preload',S.preload!==false))}</div></section>
-<section data-s="browser"><h2 class="big">默认浏览器</h2><div class="card">${row('默认浏览器','将 Iridium 设为默认浏览器',S.isDefault?'<span style="color:var(--text2);font-size:13px">Iridium 已是默认浏览器</span>':'<button class="btn" data-defb="1">设为默认</button>')}</div></section>
 <section data-s="languages"><h2 class="big">语言</h2><div class="card"><div class="hd">首选语言</div>${row('Iridium 的显示语言','',sel('uiLang',[['zh','中文（简体）'],['en','English (United States)']],S.uiLang||'zh'))}${row('拼写检查','在文本框中输入内容时检查拼写',tg('spell',S.spell!==false))}${row('翻译外语网页','当网页语言不是您所用的语言时，提供翻译服务',tg('offerTranslate',S.offerTranslate!==false))}</div></section>
-<section data-s="downloads"><h2 class="big">下载内容</h2><div class="card">${row('位置','~/Downloads','<button class="btn" data-soon="1">更改</button>')}${row('下载前询问每个文件的保存位置','',tg('askDl',!!S.askDl))}${row('下载完成后显示“下载内容”','',tg('showDl',S.showDl!==false))}</div></section>
-<section data-s="a11y"><h2 class="big">无障碍</h2><div class="card">${row('使用插入光标浏览网页','按 F7 键即可开启或关闭插入光标浏览功能',tg('caret',!!S.caret))}${row('页面缩放','',sel('pageZoom',[['75','75%'],['90','90%'],['100','100%（默认）'],['110','110%'],['125','125%'],['150','150%'],['200','200%']],S.pageZoom||'100'))}${row('字号','',sel('fontSize',[['s','小'],['m','中（推荐）'],['l','大'],['xl','特大']],S.fontSize||'m'))}${row('在 Chrome 应用商店中添加无障碍功能','','',null)}</div></section>
-<section data-s="system"><h2 class="big">系统</h2><div class="card">${row('关闭 Iridium 后继续运行后台应用','',tg('bgApps',S.bgApps!==false))}${row('在可用时使用图形加速','',tg('hwAccel',S.hwAccel!==false))}${row('打开您计算机的代理设置','','',null)}</div></section>
+<section data-s="downloads"><h2 class="big">下载内容</h2><div class="card">${row('位置','我的文件/下载','<button class="btn" data-soon="1">更改</button>')}${row('下载前询问每个文件的保存位置','',tg('askDl',!!S.askDl))}${row('下载完成后显示“下载内容”','',tg('showDl',S.showDl!==false))}</div></section>
+<section data-s="a11y"><h2 class="big">无障碍</h2><div class="card">${row('使用插入光标浏览网页','按 F7 键即可开启或关闭插入光标浏览功能',tg('caret',!!S.caret))}${row('页面缩放','',sel('pageZoom',[['75','75%'],['90','90%'],['100','100%（默认）'],['110','110%'],['125','125%'],['150','150%'],['200','200%']],S.pageZoom||'100'))}${row('字号','',sel('fontSize',[['s','小'],['m','中（推荐）'],['l','大'],['xl','特大']],S.fontSize||'m'))}${row('在 IridiumOS 设置中管理无障碍功能','','','chrome://os-settings/')}</div></section>
 <section data-s="reset"><h2 class="big">重置设置</h2><div class="card">${row('将设置还原为原始默认设置','','<button class="btn" data-reset="1">重置设置</button>')}</div></section>
-<section data-s="help"><h2 class="big">关于 Iridium</h2><div class="card"><div class="srow" style="padding:28px 20px">${IRI(56)}<div class="stx" style="margin-left:6px"><div class="st" style="font-size:20px">Iridium</div><div class="sd">${svg(P.check,14).replace('<svg','<svg style="display:inline;vertical-align:-2px;color:#188038"')} Iridium 已是最新版本</div><div class="sd">版本 ${VERSION}（正式版本）（64 位）</div></div></div>${row('作者',AUTHOR,'')}${row('获取 Iridium 帮助','','','')}${row('版本信息','chrome://version','','chrome://version/')}${row('开源许可','chrome://credits','','chrome://credits/')}</div></section>
+<section data-s="help"><h2 class="big">关于 Iridium</h2><div class="card"><div class="srow" style="padding:28px 20px">${IRI(56)}<div class="stx" style="margin-left:6px"><div class="st" style="font-size:20px">Iridium</div><div class="sd">${svg(P.check,14).replace('<svg','<svg style="display:inline;vertical-align:-2px;color:#188038"')} Iridium 已是最新版本</div><div class="sd">版本 ${VERSION}（正式版本）（64 位）</div></div></div>${row('作者',AUTHOR,'')}${row('其他 IridiumOS 设置','在 IridiumOS 设置中查看设备与系统更新','','chrome://os-settings/about')}${row('获取 Iridium 帮助','','','')}${row('版本信息','chrome://version','','chrome://version/')}${row('开源许可','chrome://credits','','chrome://credits/')}</div></section>
+<div class="card" id="set-empty" hidden><div class="empty">找不到匹配的搜索结果</div></div>
 </div></div></div>`);
-  const show=()=>{const q=$('.psearch input',root).value.trim().toLowerCase();
+  const setSec=s=>{sec=s;t.url='chrome://settings/'+(sec==='people'?'':sec);t.hist[t.idx]&&(t.hist[t.idx].url=t.url);updateUI()};
+  const show=()=>{const q=$('.psearch input',root).value.trim().toLowerCase();let total=0;
     $$('nav a[data-sec]',root).forEach(a=>a.classList.toggle('on',!q&&a.dataset.sec===sec));
-    $$('section',root).forEach(s=>{s.style.display=(!q&&s.dataset.s===sec)||q?'':'none';let any=!q;$$('.card',s).forEach(c=>{let cany=!q;$$('.srow',c).forEach(r=>{const m=!q||r.textContent.toLowerCase().includes(q);r.style.display=m?'':'none';if(m){any=true;cany=true}});c.style.display=cany?'':'none'});if(q)s.style.display=any?'':'none'})};
+    $$('section',root).forEach(s=>{s.style.display=(!q&&s.dataset.s===sec)||q?'':'none';let any=!q;$$('.card',s).forEach(c=>{let cany=!q;$$('.srow',c).forEach(r=>{const m=!q||r.textContent.toLowerCase().includes(q);r.style.display=m?'':'none';if(m){any=true;cany=true}});c.style.display=cany?'':'none'});if(q){s.style.display=any?'':'none';if(any)total++}});
+    const em=$('#set-empty',root);if(em)em.hidden=!(q&&!total)};
   show();
   $('.psearch input',root).addEventListener('input',show);
   root.addEventListener('click',e=>{
-    const a=e.target.closest('[data-sec]');if(a){$('.psearch input',root).value='';sec=a.dataset.sec;t.url='chrome://settings/'+(sec==='people'?'':sec)+'';t.hist[t.idx]&&(t.hist[t.idx].url=t.url);show();updateUI();return}
-    const g=e.target.closest('[data-go]');if(g){const v=g.dataset.go;if(/^chrome:/.test(v))go(t,v);else{$('.psearch input',root).value='';sec=v;show()}return}
+    const a=e.target.closest('[data-sec]');if(a){$('.psearch input',root).value='';setSec(a.dataset.sec);show();return}
+    const g=e.target.closest('[data-go]');if(g){const v=g.dataset.go;if(/^chrome:/.test(v))go(t,v);else{$('.psearch input',root).value='';setSec(v);show()}return}
     if(e.target.closest('[data-soon]')){toast('此设置在当前版本中暂不可用');return}
     const cv=e.target.closest('.srow.chev');if(cv){toast('此设置在当前版本中暂不可用');return}
-    const db=e.target.closest('[data-defb]');if(db){S.isDefault=true;saveS();db.replaceWith(el('<span style="color:var(--text2);font-size:13px">Iridium 已是默认浏览器</span>'));toast('已将 Iridium 设为默认浏览器');return}
     const rs=e.target.closest('[data-reset]');if(rs){dialog('重置设置','此操作会将启动页面、新标签页、搜索引擎和固定标签页等设置恢复为默认值，并停用所有扩展程序。您的书签、历史记录和已保存的密码不会被清除。',[{text:'取消'},{text:'重置设置',pri:true,fn:()=>{S=freshS();saveS();applySettings();refreshNtps();toast('设置已重置');setTimeout(()=>reload(t),160)}}]);return}
     const c=e.target.closest('[data-clear]');if(c){clearDataDialog();return}
     const n=e.target.closest('[data-ntp]');if(n){openCustomize();return}
@@ -2309,6 +2306,7 @@ function pageSettings(t,u){
   root.addEventListener('change',e=>{
     const k=e.target.dataset.k;if(!k)return;
     S[k]=e.target.type==='checkbox'?e.target.checked:e.target.value;saveS();applySettings();
+    if(k==='pageZoom'){tabs.forEach(x=>{x.zoom=(+S.pageZoom||100)/100;applyZoom(x)});updateUI()}
   });
   return root;
 }
@@ -3218,9 +3216,9 @@ function act(e,root){
   else if(a==='cancel'){d.state='canc';live[d.id]&&(live[d.id].ctl.abort(),live[d.id].go&&live[d.id].go());delete live[d.id]}
   else if(a==='remove'){DL=DL.filter(x=>x!==d)}
   else if(a==='retry'){DL=DL.filter(x=>x!==d);start(d.url,d.name)}
-  else if(a==='show'){toast('已在文件夹中显示：~/Downloads/'+d.name)}
+  else if(a==='show'){toast('已在文件夹中显示：我的文件/下载/'+d.name)}
   else if(a==='open'){if(d.blob)window.open(d.blob,'_blank');else if(d.state==='done')toast('无法打开文件：已被移动或删除');}
-  else if(a==='more'){const r=b.getBoundingClientRect();showMenu([{label:'打开',fn:()=>d.blob?window.open(d.blob,'_blank'):toast('无法打开文件')},{label:'在文件夹中显示',fn:()=>toast('已在文件夹中显示：~/Downloads/'+d.name)},{label:'复制下载链接',fn:()=>{navigator.clipboard&&navigator.clipboard.writeText(d.url).catch(()=>{});toast('已复制链接')}},'-',{label:'从列表中删除',fn:()=>{DL=DL.filter(x=>x!==d);save();render()}}],r.right,r.bottom+2,{right:true});return}
+  else if(a==='more'){const r=b.getBoundingClientRect();showMenu([{label:'打开',fn:()=>d.blob?window.open(d.blob,'_blank'):toast('无法打开文件')},{label:'在文件夹中显示',fn:()=>toast('已在文件夹中显示：我的文件/下载/'+d.name)},{label:'复制下载链接',fn:()=>{navigator.clipboard&&navigator.clipboard.writeText(d.url).catch(()=>{});toast('已复制链接')}},'-',{label:'从列表中删除',fn:()=>{if(d.blob)try{URL.revokeObjectURL(d.blob)}catch(e){}DL=DL.filter(x=>x!==d);save();render()}}],r.right,r.bottom+2,{right:true});return}
   save();render();
 }
 /* ---------- chrome://downloads ---------- */
