@@ -1387,7 +1387,7 @@ const tabsEl=$('#tabs'),content=$('#content');
 const cur=()=>activeTab;
 const byId=id=>tabs.find(t=>t.id===id);
 function newTab(url,opt={}){
-  const t={id:uid(),group:null,url:'',title:'新标签页',hist:[],idx:-1,loading:false,pinned:!!opt.pinned,zoom:(+S.pageZoom||100)/100,view:document.createElement('div'),frame:null,kind:'blank',favKey:null,_new:true};
+  const t={id:uid(),group:null,url:'',title:'新标签页',hist:[],idx:-1,loading:false,pinned:!!opt.pinned,zoom:defZoom(),view:document.createElement('div'),frame:null,kind:'blank',favKey:null,_new:true};
   t.view.className='tabview';t.view.style.display='none';content.insertBefore(t.view,$('#findbar'));
   const pc=tabs.filter(x=>x.pinned).length;
   let at=opt.index!=null?opt.index:(opt.afterActive&&activeTab?tabs.indexOf(activeTab)+1:tabs.length);
@@ -1668,6 +1668,7 @@ function stop(t){if(t&&t.loading){clearTimeout(t._lt);t.loading=false;try{t.fram
 function goBack(t){if(t.idx>0){t.idx--;load(t,t.hist[t.idx].url)}}
 function goFwd(t){if(t.idx<t.hist.length-1){t.idx++;load(t,t.hist[t.idx].url)}}
 const ZSTEPS=[.25,.33,.5,.67,.75,.8,.9,1,1.1,1.25,1.5,1.75,2,2.5,3,4,5];
+const defZoom=()=>(+S.pageZoom||100)/100;
 function applyZoom(t){if(!t)return;t.view.style.zoom=t.zoom;t.view.style.width=t.view.style.height=(100/t.zoom)+'%'}
 function zoomStep(t,d,quiet){if(!t)return;let i=ZSTEPS.findIndex(z=>Math.abs(z-t.zoom)<.01);if(i<0)i=7;i=Math.max(0,Math.min(ZSTEPS.length-1,i+d));t.zoom=ZSTEPS[i];applyZoom(t);updateUI();if(!quiet)showZoomBubble()}
 function openReal(url){window.open(url,'_blank','noopener')}
@@ -1711,7 +1712,7 @@ function updateUI(){
   else if(/^file:/i.test(u)){si.innerHTML=I.info+'<span>文件</span>'}
   else if(isInternal(u)){si.innerHTML=IRI(18)}
   else si.innerHTML=I.info;
-  const zb=$('#zoomBtn');zb.hidden=Math.abs(t.zoom-1)<.01;zb.innerHTML=svg(t.zoom<1?P.zoomOut:P.zoomIn,18);zb.title='缩放：'+Math.round(t.zoom*100)+'%';
+  const zb=$('#zoomBtn'),dz=defZoom();zb.hidden=Math.abs(t.zoom-dz)<.01;zb.innerHTML=svg(t.zoom<dz?P.zoomOut:P.zoomIn,18);zb.title='缩放：'+Math.round(t.zoom*100)+'%';
   document.title=(INC?'(无痕) ':'')+t.title+' - Iridium';
   fillTab(t);statusBubble(t);
 }
@@ -1975,7 +1976,7 @@ function showZoomBubble(){
   const b=el(`<div><div class="zrow" style="margin:0;padding:0"><button data-z="-1" title="缩小">${svg('M19 13H5v-2h14v2z',18)}</button><span class="zv"></span><button data-z="1" title="放大">${svg(P.add,18)}</button><span class="zsep"></span><button data-z="0" style="padding:0 14px;color:var(--blue);font-weight:500;border-radius:14px">重置</button></div></div>`);
   const upd=()=>{$('.zv',b).textContent=Math.round(cur().zoom*100)+'%'};upd();
   showBubble(b,$('#zoomBtn').hidden?$('#omnibox'):$('#zoomBtn'),'zoom');b.style.width='auto';b.style.padding='6px 10px';
-  b.addEventListener('click',e=>{const x=e.target.closest('button');if(!x)return;const z=+x.dataset.z;if(z===0){cur().zoom=1;applyZoom(cur());updateUI()}else zoomStep(cur(),z,true);upd();clearTimeout(zbT);zbT=setTimeout(()=>{if(layer.dataset.owner==='zoom')closePopups()},4000)});
+  b.addEventListener('click',e=>{const x=e.target.closest('button');if(!x)return;const z=+x.dataset.z;if(z===0){cur().zoom=defZoom();applyZoom(cur());updateUI()}else zoomStep(cur(),z,true);upd();clearTimeout(zbT);zbT=setTimeout(()=>{if(layer.dataset.owner==='zoom')closePopups()},4000)});
   clearTimeout(zbT);zbT=setTimeout(()=>{if(layer.dataset.owner==='zoom')closePopups()},4000);
 }
 function zoomMenu(){showZoomBubble()}
@@ -2325,14 +2326,14 @@ function pageSettings(t,u){
     const g=e.target.closest('[data-go]');if(g){const v=g.dataset.go;if(/^chrome:/.test(v))go(t,v);else{$('.psearch input',root).value='';setSec(v);show()}return}
     if(e.target.closest('[data-soon]')){toast('此设置在当前版本中暂不可用');return}
     const cv=e.target.closest('.srow.chev');if(cv){toast('此设置在当前版本中暂不可用');return}
-    const rs=e.target.closest('[data-reset]');if(rs){dialog('重置设置','此操作会将启动页面、新标签页、搜索引擎和固定标签页等设置恢复为默认值，并停用所有扩展程序。您的书签、历史记录和已保存的密码不会被清除。',[{text:'取消'},{text:'重置设置',pri:true,fn:()=>{S=freshS();saveS();applySettings();refreshNtps();toast('设置已重置');setTimeout(()=>reload(t),160)}}]);return}
+    const rs=e.target.closest('[data-reset]');if(rs){dialog('重置设置','此操作会将启动页面、新标签页、搜索引擎和固定标签页等设置恢复为默认值，并停用所有扩展程序。您的书签、历史记录和已保存的密码不会被清除。',[{text:'取消'},{text:'重置设置',pri:true,fn:()=>{S=freshS();saveS();applySettings();refreshNtps();tabs.forEach(x=>{x.zoom=defZoom();applyZoom(x)});updateUI();toast('设置已重置');setTimeout(()=>reload(t),160)}}]);return}
     const c=e.target.closest('[data-clear]');if(c){clearDataDialog();return}
     const n=e.target.closest('[data-ntp]');if(n){openCustomize();return}
   });
   root.addEventListener('change',e=>{
     const k=e.target.dataset.k;if(!k)return;
     S[k]=e.target.type==='checkbox'?e.target.checked:e.target.value;saveS();applySettings();
-    if(k==='pageZoom'){tabs.forEach(x=>{x.zoom=(+S.pageZoom||100)/100;applyZoom(x)});updateUI()}
+    if(k==='pageZoom'){tabs.forEach(x=>{x.zoom=defZoom();applyZoom(x)});updateUI()}
   });
   return root;
 }
@@ -2532,7 +2533,7 @@ document.addEventListener('keydown',e=>{
   else if(c&&!e.shiftKey&&k==='f'){stop();openFind()}
   else if(c&&(k==='+'||k==='=')){stop();zoomStep(t,1)}
   else if(c&&k==='-'){stop();zoomStep(t,-1)}
-  else if(c&&k==='0'){stop();t.zoom=1;applyZoom(t);updateUI()}
+  else if(c&&k==='0'){stop();t.zoom=defZoom();applyZoom(t);updateUI()}
   else if(c&&e.key==='Tab'){stop();const i=tabs.indexOf(t),n=tabs.length;activate(tabs[(i+(e.shiftKey?-1:1)+n)%n])}
   else if(c&&/^[1-9]$/.test(e.key)){stop();const n=+e.key,tg=n===9?tabs[tabs.length-1]:tabs[n-1];if(tg)activate(tg)}
   else if(e.altKey&&!c&&e.key==='ArrowLeft'){stop();goBack(t)}
@@ -2544,7 +2545,7 @@ document.addEventListener('keydown',e=>{
   else if(c&&e.shiftKey&&(e.key==='PageDown'||e.key==='PageUp')){stop();const i=tabs.indexOf(t),j=i+(e.key==='PageUp'?-1:1);if(j>=0&&j<tabs.length&&!!tabs[j].pinned===!!t.pinned){tabs.splice(i,1);tabs.splice(j,0,t);renderTabs();saveSession()}}
   else if(c&&!e.shiftKey&&k==='p'){stop();openPrint(t)}
   else if(c&&(e.key==='PageDown'||e.key==='PageUp')){stop();const i=tabs.indexOf(t),n=tabs.length;activate(tabs[(i+(e.key==='PageUp'?-1:1)+n)%n])}
-  else if(e.key==='F3'||(c&&k==='g')){stop();if($('#findbar').hidden&&!$('#findin').value)openFind();else doFind(e.shiftKey)}
+  else if(e.key==='F3'||(c&&k==='g')){stop();if($('#findbar').hidden)openFind();else doFind(e.shiftKey)}
   else if(c&&k==='e'){stop();focusOmni()}
   else if(c&&k==='s'){stop();toast('另存为：当前版本暂不支持')}
   else if(e.altKey&&!c&&!e.shiftKey&&(k==='f'||k==='e')){stop();mainMenu()}
@@ -2604,12 +2605,13 @@ function batIcon(l,c){
 }
 function renderStatus(){
   const s=$('#status');if(!s)return;
-  const wf=OS.wifi&&navigator.onLine;
+  const wf=netOn();
   s.innerHTML=`<span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span>${OS.dnd?`<span style="display:flex">${svg(P.dnd,16)}</span>`:''}<span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span id="clock">${hhmm()}</span>`;
   s.title=dateStr()+' '+hhmm()+'\n电池电量 '+BAT.l+'%'+(BAT.c?'（正在充电）':'');
 }
 mq.addEventListener&&mq.addEventListener('change',()=>{if(OS.dark==null){applyOS();applySettings()}});
 setInterval(renderStatus,15000);
+addEventListener('online',renderStatus);addEventListener('offline',renderStatus);
 
 /* 应用 */
 const APPS=[{id:'iri',n:'Iridium',k:'browser chrome'},{id:'files',n:'文件',k:'files',ic:P.folder,bg:'#1a73e8'},{id:'set',n:'设置',k:'settings',ic:P.gear,bg:'#5f6368'},{id:'cam',n:'相机',k:'camera',ic:P.cam,bg:'#d93025'},{id:'cal',n:'日历',k:'calendar',ic:P.cal,bg:'#1a73e8'},{id:'photos',n:'图库',k:'photos gallery',ic:P.bm,bg:'#f29900'}];
@@ -3096,7 +3098,7 @@ window.openTaskMgr=function(){
   const kill=()=>{const t=tabs.find(x=>x.id===selId);if(t){selId=null;closeTab(t);setTimeout(()=>{draw();me.focus()},60)}};
   me.addEventListener('mousedown',e=>{if(!e.target.closest('button'))setTimeout(()=>me.focus(),0)});
   $('.btn',me).onclick=kill;
-  tmEsc=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeTM()}};document.addEventListener('keydown',tmEsc,true);
+  tmEsc=e=>{if(e.key==='Escape'&&!e.shiftKey&&!e.metaKey&&!e.ctrlKey&&!e.altKey){e.preventDefault();e.stopPropagation();closeTM()}};document.addEventListener('keydown',tmEsc,true);
   me.addEventListener('keydown',e=>{if(e.key==='Delete'){kill()}});
   const hd=$('.tmh',me);let dr=null;
   hd.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const r=me.getBoundingClientRect();dr={x:e.clientX-r.left,y:e.clientY-r.top};me.style.margin='0';me.style.left=r.left+'px';me.style.top=r.top+'px';hd.setPointerCapture(e.pointerId)});
@@ -3389,7 +3391,7 @@ render();
   function adoptTab(p,index){
     const t=newTab(p.url||'chrome://newtab/',{index:index==null?null:index,bg:true,pinned:p.pinned});
     if(p.hist&&p.hist.length){t.hist=p.hist.map(h=>({url:h.url,title:h.title||''}));t.idx=Math.max(0,Math.min(p.idx,t.hist.length-1))}
-    if(p.zoom&&p.zoom!==1){t.zoom=p.zoom;applyZoom(t)}
+    if(p.zoom&&Math.abs(p.zoom-t.zoom)>.001){t.zoom=p.zoom;applyZoom(t)}
     if(p.title&&t.kind==='web')setTitle(t,p.title);
     if(p.group){if(!groups[p.group.id])groups[p.group.id]={id:p.group.id,name:p.group.name,color:p.group.color,collapsed:false};t.group=p.group.id}
     return t;
@@ -3665,7 +3667,14 @@ render();
       {transformOrigin:'50% 50%',transform:'translate(0px,0px) scale(1)',opacity:1,borderRadius:rad+'px'}
     ],{duration:300,easing:'cubic-bezier(.1,.8,.2,1)'}));
   }
-  function cycle(prev){const l=order().filter(x=>!x.closing);if(l.length>1)focusWin(prev?l[1]:l[l.length-1])}
+  function cycle(prev){
+    const l=order().filter(x=>!x.closing);if(l.length<2)return;
+    if(!prev){focusWin(l[l.length-1]);return}
+    /* 逆向：把当前最上层窗口沉到最底层，再聚焦次顶层，使其与正向切换互为逆操作（三个及以上窗口时才能完整轮转） */
+    const top=l[0],seq=order().filter(x=>x!==top);seq.push(top);
+    seq.forEach((x,i)=>{x.z=seq.length-i;x.fr.style.zIndex=100+x.z});zc=seq.length;
+    focusWin(l[1]);
+  }
 
   /* ---------- 最大化 / 吸附 / 全屏 ---------- */
   function setMax(w,on){
@@ -3920,7 +3929,7 @@ render();
       case 'dragstart':beginDrag(w,m);break;
       case 'tabout':tabOut(w,m);break;
       case 'dragmove':if(D&&D.kind==='move')dragAt(m.sx+D.ofx,m.sy+D.ofy,m.b);break;
-      case 'dragend':if(D&&D.kind==='move')dragEnd(m.cancel?D.w.b.x+D.ox:m.sx+D.ofx,m.cancel?D.w.b.y+D.oy:m.sy+D.ofy);break;
+      case 'dragend':if(D&&D.kind==='move'){if(m.cancel&&D.hover){send(D.hover,'dropLeave');D.hover=null}dragEnd(m.cancel?D.w.b.x+D.ox:m.sx+D.ofx,m.cancel?D.w.b.y+D.oy:m.sy+D.ofy)}break;
       case 'sbshow':showSB(w,m);break;
       case 'sbhide':clearTimeout(sbT);sbT=setTimeout(rmSB,250);break;
       case 'exported':{const f=reqs[m.req];if(f){delete reqs[m.req];f(m.tabs)}break}
