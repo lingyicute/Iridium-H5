@@ -157,7 +157,7 @@ body.dark #sugg{box-shadow:0 8px 16px rgba(0,0,0,.5),0 0 0 1px rgba(255,255,255,
 #sidepanel .spb{flex:1;overflow:auto;padding:4px 18px 20px}
 #sidepanel h4{margin:18px 0 10px;font-size:13px;font-weight:500;color:var(--text)}
 .swg{display:flex;flex-wrap:wrap;gap:10px}
-.swt{width:40px;height:40px;border-radius:50%;border:2px solid var(--cline);position:relative;display:flex;align-items:center;justify-content:center;color:var(--onbluec)}
+.swt{width:40px;height:40px;border-radius:50%;border:2px solid var(--cline);position:relative;display:flex;align-items:center;justify-content:center;color:#041e49}
 .swt.on{border-color:var(--blue);box-shadow:0 0 0 2px var(--menu),0 0 0 4px var(--blue)}
 .seg{display:flex;border:1px solid var(--cline);border-radius:18px;overflow:hidden;height:36px}
 .seg button{flex:1;font-size:13px}
@@ -1221,7 +1221,8 @@ const defS={theme:'system',showBm:true,showHome:false,engine:'iridium',startup:'
 const freshS=extra=>{const c=JSON.parse(JSON.stringify(defS)),o=Object.assign(c,extra);if(!o.flags||typeof o.flags!=='object')o.flags={};if(!Array.isArray(o.shortcuts))o.shortcuts=c.shortcuts;return o};
 let S=freshS(store.get('settings',{}));
 const saveS=()=>store.set('settings',S);
-let BM=store.get('bm',null)||{bar:[
+const isNtpUrl=u=>/^chrome:\/\/(newtab|new-tab-page)(\/|$|\?|#)/i.test(u||'');
+let BM=store.get('bm',null);if(!BM||!Array.isArray(BM.bar)||!Array.isArray(BM.other))BM={bar:[
   {id:uid(),type:'url',title:'维基百科',url:'https://zh.wikipedia.org/'},
   {id:uid(),type:'url',title:'Example Domain',url:'https://example.com/'},
   {id:uid(),type:'folder',title:'开发',children:[
@@ -1230,7 +1231,7 @@ let BM=store.get('bm',null)||{bar:[
     {id:uid(),type:'url',title:'lingyicute 的 GitHub',url:'https://github.com/lingyicute'}]},
   {id:uid(),type:'url',title:'OpenStreetMap',url:'https://www.openstreetmap.org/'}
 ],other:[]};
-let HIST=INC?[]:store.get('hist',[]);
+let HIST=INC?[]:store.get('hist',[]);if(!Array.isArray(HIST))HIST=[];
 const saveH=()=>{if(!INC)store.set('hist',HIST)};
 const saveBM=()=>{store.set('bm',BM);onDataChange()};
 
@@ -1268,6 +1269,7 @@ function applySettings(){
   $('#bmbar').classList.toggle('hide',!S.showBm);
   $('#home').hidden=!S.showHome;
   renderBmBar();setTimeout(layoutBm,30);
+  if(window.refreshCustomize)refreshCustomize();
 }
 mq.addEventListener&&mq.addEventListener('change',applySettings);
 
@@ -1369,10 +1371,12 @@ function showBubble(node,anchor,owner,right=true){
 }
 function dialog(title,body,btns){
   const ov=el(`<div class="overlay popup"><div class="dlg"><h2>${title}</h2><div class="dbody">${body}</div><div class="dbtn"></div></div></div>`);
-  {const rm0=ov.remove.bind(ov);ov.remove=()=>{if(ov._c)return;ov._c=1;ov.classList.add('out');setTimeout(rm0,130)}}
+  const dk=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();ov.remove()}};
+  document.addEventListener('keydown',dk,true);
+  {const rm0=ov.remove.bind(ov);ov.remove=()=>{if(ov._c)return;ov._c=1;document.removeEventListener('keydown',dk,true);ov.classList.add('out');setTimeout(rm0,130)}}
   btns.forEach(b=>{const x=el(`<button class="btn${b.pri?' pri':''}">${b.text}</button>`);x.onclick=()=>{if(b.fn&&b.fn(ov)===false)return;ov.remove()};$('.dbtn',ov).append(x)});
   ov.addEventListener('mousedown',e=>{if(e.target===ov)ov.remove()});
-  ov.addEventListener('keydown',e=>{if(e.key==='Escape')ov.remove();if(e.key==='Enter'&&e.target.tagName==='INPUT'){const p=$('.btn.pri',ov);p&&p.click()}});
+  ov.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'){const p=$('.btn.pri',ov);p&&p.click()}});
   document.body.append(ov);const i=$('input',ov);i&&(i.focus(),i.select());return ov;
 }
 let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200)}
@@ -1385,12 +1389,14 @@ const byId=id=>tabs.find(t=>t.id===id);
 function newTab(url,opt={}){
   const t={id:uid(),group:null,url:'',title:'新标签页',hist:[],idx:-1,loading:false,pinned:!!opt.pinned,zoom:(+S.pageZoom||100)/100,view:document.createElement('div'),frame:null,kind:'blank',favKey:null,_new:true};
   t.view.className='tabview';t.view.style.display='none';content.insertBefore(t.view,$('#findbar'));
-  const at=opt.index!=null?opt.index:(opt.afterActive&&activeTab?tabs.indexOf(activeTab)+1:tabs.length);
+  const pc=tabs.filter(x=>x.pinned).length;
+  let at=opt.index!=null?opt.index:(opt.afterActive&&activeTab?tabs.indexOf(activeTab)+1:tabs.length);
+  at=opt.pinned?Math.min(at,pc):Math.max(at,pc);
   unlockTabs();tabs.splice(at,0,t);renderTabs();
   go(t,url||'chrome://newtab/');
   if(!opt.bg)activate(t);
   saveSession();
-  if(!opt.bg&&(!url||/newtab/.test(t.url)))setTimeout(focusOmni,30);
+  if(!opt.bg&&(!url||isNtpUrl(t.url)))setTimeout(focusOmni,30);
   return t;
 }
 function activate(t){
@@ -1398,7 +1404,7 @@ function activate(t){
   if(t.group&&groups[t.group])groups[t.group].collapsed=false;
   tabs.forEach(fillTab);renderGroups();applyZoom(t);updateUI();$('#findbar').hidden=true;
 }
-function pushClosed(t,i){clearTimeout(t._lt);if(t.el)try{tro.unobserve(t.el)}catch(e){}if(t.url&&!/^chrome:\/\/newtab/.test(t.url)){closedStack.push({url:t.url,title:t.title||'',pinned:t.pinned,index:i});if(closedStack.length>25)closedStack.shift()}}
+function pushClosed(t,i){clearTimeout(t._lt);if(t.el)try{tro.unobserve(t.el)}catch(e){}if(t.url&&!isNtpUrl(t.url)){closedStack.push({url:t.url,title:t.title||'',pinned:t.pinned,index:i});if(closedStack.length>25)closedStack.shift()}}
 function closeTab(t,fromMouse){
   const i=tabs.indexOf(t);if(i<0)return;
   pushClosed(t,i);
@@ -1409,7 +1415,7 @@ function closeTab(t,fromMouse){
   if(activeTab===t)activate(tabs[Math.min(i,tabs.length-1)]);
   renderTabs();saveSession();
 }
-function reopenClosed(){const c=closedStack.pop();if(!c)return;const t=newTab(c.url,{index:Math.min(c.index,tabs.length),pinned:c.pinned})}
+function reopenClosed(){const c=closedStack.pop();if(!c)return;const pc=tabs.filter(x=>x.pinned).length;const idx=c.pinned?Math.min(c.index,pc):Math.max(pc,Math.min(c.index,tabs.length));newTab(c.url,{index:idx,pinned:c.pinned})}
 let noTabAnim=true;
 const reduceMotion=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
 function collapseTab(e){
@@ -1465,7 +1471,7 @@ function tabMenu(t,x,y){
   showMenu([
     {label:'在右侧新建标签页',icon:ic(P.add),fn:()=>newTab(null,{index:i+1})},'-',
     {label:'重新加载',icon:ic(P.reload),key:'Ctrl+R',fn:()=>reload(t)},
-    {label:'复制',icon:ic(P.copy),fn:()=>{newTab(t.url,{index:i+1,bg:true})}},
+    {label:'复制',icon:ic(P.copy),fn:()=>{const nt=newTab(t.url,{index:i+1,bg:true,pinned:t.pinned});if(t.hist.length){nt.hist=t.hist.map(h=>({url:h.url,title:h.title||''}));nt.idx=t.idx}if(!t.pinned&&t.group){nt.group=t.group;renderTabs();saveSession()}}},
     {label:t.pinned?'取消固定':'固定',icon:ic(P.pin),fn:()=>{t.pinned=!t.pinned;if(t.pinned)t.group=null;tabs.sort((a,b)=>(b.pinned?1:0)-(a.pinned?1:0));renderTabs();saveSession()}},
     !t.pinned&&{label:'添加到新群组',icon:ic(P.add),fn:()=>newGroup(t)},
     (!t.pinned&&Object.keys(groups).filter(k=>k!==t.group).length)?{label:'添加到群组',icon:ic(P.chev),sub:()=>Object.values(groups).filter(g=>g.id!==t.group).map(g=>({label:g.name||('未命名群组（'+GCN[g.color]+'）'),icon:`<span class="gdot" style="background:${GCOL[g.color]}"></span>`,fn:()=>addToGroup(t,g.id)}))}:null,
@@ -1669,18 +1675,18 @@ function openReal(url){window.open(url,'_blank','noopener')}
 /* ============ UI 更新 ============ */
 function displayUrl(t){
   const u=t.url||'';
-  if(/^chrome:\/\/newtab/.test(u))return '';
+  if(isNtpUrl(u))return '';
   if(u==='about:blank')return u;
   if(S.fullUrls&&/^https?:\/\//i.test(u))return u;
   if(/^https?:\/\//i.test(u)){let s=u.replace(/^https?:\/\//i,'').replace(/^www\./,'');if(/^[^\/?#]+\/$/.test(s))s=s.slice(0,-1);return s}
   return u;
 }
-function fullUrl(t){return /^chrome:\/\/newtab/.test(t.url)?'':t.url}
+function fullUrl(t){return isNtpUrl(t.url)?'':t.url}
 const urlIn=$('#url');
 function safeDec(s){try{return decodeURI(s)}catch(e){return s}}
 function urlHtml(t){
   const u=t.url||'';
-  if(/^chrome:\/\/newtab/.test(u))return '';
+  if(isNtpUrl(u))return '';
   if(S.fullUrls&&/^https?:\/\//i.test(u)){try{const o=new URL(u);return `${esc(o.protocol+'//')}<b>${esc(o.host)}</b>${esc(safeDec(o.pathname+o.search+o.hash))}`}catch(e){}}
   if(/^https?:\/\//i.test(u)){try{const o=new URL(u);const host=o.host.replace(/^www\./,'');let rest=safeDec(o.pathname+o.search+o.hash);if(rest==='/')rest='';return `<b>${esc(host)}</b>${esc(rest)}`}catch(e){}}
   const m=u.match(/^(chrome:\/\/|chrome-search:\/\/)([^\/?#]*)(.*)$/i);
@@ -1693,7 +1699,7 @@ function updateUI(){
   $('#reload').innerHTML=t.loading?I.close:I.reload;$('#reload').title=t.loading?'停止加载此页 (Esc)':'重新加载 (Ctrl+R)';
   if(document.activeElement!==urlIn)urlIn.value=displayUrl(t);
   $('#urlshow').innerHTML=urlHtml(t);
-  const u=t.url,isNtp=/^chrome:\/\/newtab/.test(u),bm=findByUrl(u);
+  const u=t.url,isNtp=isNtpUrl(u),bm=findByUrl(u);
   $('#star').style.display=(isNtp||t.kind==='error')?'none':'flex';
   $('#star').innerHTML=bm?I.starOn:I.star;$('#star').classList.toggle('on',!!bm);
   $('#star').title=bm?'修改此书签':'为此标签页添加书签 (Ctrl+D)';
@@ -1778,11 +1784,11 @@ function commit(val,newTabMode){
   if(newTabMode){newTab(val,{afterActive:true});return}
   go(t,val);
 }
-urlIn.addEventListener('focus',()=>{$('#omnibox').classList.add('focus');const t=cur();urlIn.value=fullUrl(t);urlIn.select();justFocused=true;const si=$('#siteinfo');si.classList.remove('warn');si.innerHTML=I.search;typed=urlIn.value;if(clickFocus)refreshSugg();clickFocus=false});
+urlIn.addEventListener('focus',()=>{$('#omnibox').classList.add('focus');const t=cur();urlIn.value=fullUrl(t);urlIn.select();justFocused=clickFocus;const si=$('#siteinfo');si.classList.remove('warn');si.innerHTML=I.search;typed=urlIn.value;if(clickFocus)refreshSugg();clickFocus=false});
 let clickFocus=false;urlIn.addEventListener('mousedown',()=>{clickFocus=true;setTimeout(()=>{clickFocus=false},0)});
 let justFocused=false;
 urlIn.addEventListener('mouseup',e=>{if(justFocused){e.preventDefault();justFocused=false}});
-urlIn.addEventListener('blur',()=>{clearKw();$('#omnibox').classList.remove('focus');setTimeout(hideSugg,120);const t=cur();if(t)urlIn.value=displayUrl(t);updateUI()});
+urlIn.addEventListener('blur',()=>{justFocused=false;clearKw();$('#omnibox').classList.remove('focus');setTimeout(hideSugg,120);const t=cur();if(t)urlIn.value=displayUrl(t);updateUI()});
 function inlineAC(e){
   if(!e||e.isComposing||/^delete|^insertFromPaste|Composition/.test(e.inputType||''))return;
   if(kw)return;const v=urlIn.value;if(!v||v.length>80||/\s/.test(v)||urlIn.selectionStart!==v.length)return;
@@ -1812,7 +1818,7 @@ urlIn.addEventListener('keydown',e=>{
   }else if(e.key==='Tab'&&!e.shiftKey&&!kw&&!sugg.hidden&&sgItems[Math.max(sgSel,0)]&&sgItems[Math.max(sgSel,0)].type==='kw'){
     e.preventDefault();pick(Math.max(sgSel,0));
   }else if(e.key==='Escape'){
-    if(kw){clearKw();urlIn.value='';refreshSugg()}else if(!sugg.hidden){hideSugg();urlIn.value=typed}else{urlIn.value=fullUrl(cur());urlIn.select()}
+    e.preventDefault();if(kw){clearKw();urlIn.value='';refreshSugg()}else if(!sugg.hidden){hideSugg();urlIn.value=typed}else{urlIn.value=fullUrl(cur());urlIn.select()}
   }
 });
 sugg.addEventListener('mousedown',e=>{e.preventDefault();const ap=e.target.closest('.sa');if(ap){const s=sgItems[+ap.dataset.a];if(s){urlIn.value=s.value;urlIn.focus();urlIn.setSelectionRange(urlIn.value.length,urlIn.value.length);refreshSugg()}return}const x=e.target.closest('.sx');if(x){const s=sgItems[+x.dataset.x];if(s){HIST=HIST.filter(h=>h.url!==s.value);saveH();onDataChange();refreshSugg()}return}const s=e.target.closest('.sg');if(s)pick(+s.dataset.i,e.ctrlKey)});
@@ -1836,7 +1842,7 @@ let bmHidden=[];
 function layoutBm(){
   const box=$('#bmitems');if(!box||!S.showBm)return;
   bmHidden=[];[...box.children].forEach(c=>{c.style.visibility='visible'});
-  [...box.children].forEach((c,i)=>{if(c.offsetLeft+c.offsetWidth>box.clientWidth+1){c.style.visibility='hidden';bmHidden.push(BM.bar[i])}});
+  const bl=box.offsetLeft;[...box.children].forEach((c,i)=>{if(c.offsetLeft-bl+c.offsetWidth>box.clientWidth+1){c.style.visibility='hidden';bmHidden.push(BM.bar[i])}});
   $('#bmover').hidden=!bmHidden.length;
 }
 window.addEventListener('resize',()=>requestAnimationFrame(layoutBm));
@@ -1931,7 +1937,7 @@ function editBookmark(node,init={}){
 }
 function findIn(folder,id){let r=false;walk(folder.children,n=>{if(n.id===id)r=true});return r}
 function bookmarkBubble(t){
-  if(!t||!t.url||/^chrome:\/\/newtab/.test(t.url))return;
+  if(!t||!t.url||isNtpUrl(t.url)||t.kind==='error')return;
   let n=findByUrl(t.url);if(!n){n={id:uid(),type:'url',title:t.title,url:t.url};BM.bar.push(n);saveBM()}
   const b=el(`<div><h3>${'已添加书签'}</h3><label class="fld"><span>名称</span><input id="bbn" value="${esc(n.title)}"></label><label class="fld"><span>文件夹</span><select id="bbf">${folderOptions(parentOf(n.id))}</select></label><div class="brow"><button class="btn" id="bbr">移除</button><button class="btn pri" id="bbd">完成</button></div></div>`);
   showBubble(b,$('#star'),'star');
@@ -1941,7 +1947,7 @@ function bookmarkBubble(t){
   $('#bbn',b).addEventListener('keydown',e=>{if(e.key==='Enter')$('#bbd',b).click()});
   $('#bbn',b).focus();$('#bbn',b).select();
 }
-toggler($('#star'),'star',()=>{const t=cur();if(t.url&&!/newtab/.test(t.url))bookmarkBubble(t)});
+toggler($('#star'),'star',()=>{const t=cur();if(t&&t.url&&!isNtpUrl(t.url)&&t.kind!=='error')bookmarkBubble(t)});
 function onDataChange(){
   renderBmBar();updateUI();
   tabs.forEach(t=>{if(t.redraw)try{t.redraw()}catch(e){}});
@@ -2015,7 +2021,7 @@ toggler($('#profile'),'prof',()=>{
 });
 toggler($('#siteinfo'),'site',()=>{
   const t=cur(),u=t.url;
-  if(/^chrome:\/\/newtab/.test(u)){focusOmni();return}
+  if($('#omnibox').classList.contains('focus')||isNtpUrl(u)){focusOmni();return}
   const https=/^https:/i.test(u),http=/^http:/i.test(u),internal=isInternal(u)||u==='about:blank';
   const head=(https||http)?hostOf(u):internal?'Iridium 内部页面':'网站信息';
   let sec;
@@ -2044,7 +2050,7 @@ toggler($('#tabsearch'),'ts',()=>{
     const cl=closedStack.slice(-5).reverse().filter(c=>!q||((c.title||'')+' '+c.url).toLowerCase().includes(q));
     if(cl.length){h+='<div class="tsh">最近关闭</div>';cl.forEach(c=>{const ci=closedStack.lastIndexOf(c);h+=`<div class="tsr" role="option" data-c="${esc(c.url)}" data-ci="${ci}" data-n="${n++}"><span class="tsf">${fav(c.url,16)}</span><span class="tsm"><span class="tst">${esc(c.title||host(c.url))}</span><span class="tsu">${esc(host(c.url))}</span></span></div>`})}
     $('#tsl',b).innerHTML=h||'<div class="tsn">没有匹配的标签页</div>';
-    if(!keep)sel=q?(n?0:-1):-1;mark(false)};
+    if(!keep)sel=q?(n?0:-1):-1;else sel=Math.min(sel,n-1);mark(false)};
   const rows=()=>$$('.tsr',b);
   const mark=(scroll)=>{rows().forEach((r,i)=>r.classList.toggle('sel',i===sel));const r=rows()[sel];if(r&&scroll)r.scrollIntoView({block:'nearest'})};
   const choose=r=>{if(!r)return;if(r.dataset.t){const t=byId(r.dataset.t);closePopups();t&&activate(t)}else if(r.dataset.c){const ci=+r.dataset.ci,c=ci>=0?closedStack.splice(ci,1)[0]:null;closePopups();newTab(r.dataset.c,{pinned:c&&c.pinned})}};
@@ -2059,22 +2065,33 @@ toggler($('#tabsearch'),'ts',()=>{
   b.addEventListener('mouseleave',()=>{sel=-1;mark(false)});
   b.addEventListener('click',e=>{
     const x=e.target.closest('.tsx');
-    if(x){e.stopPropagation();const t=byId(x.dataset.x);if(t){const r=x.closest('.tsr');r.classList.add('out');setTimeout(()=>{closeTab(t);if(!tabs.length){closePopups();return}draw(true)},140)}return}
+    if(x){e.stopPropagation();const r=x.closest('.tsr');if(r.classList.contains('out'))return;const t=byId(x.dataset.x);if(t){r.classList.add('out');setTimeout(()=>{closeTab(t);if(!tabs.length){closePopups();return}draw(true)},140)}return}
     choose(e.target.closest('.tsr'))});
 });
 
 /* ============ 查找 ============ */
-function openFind(){const f=$('#findbar');f.hidden=false;$('#findin').focus();$('#findin').select()}
+function openFind(){const f=$('#findbar');f.hidden=false;$('#findin').focus();$('#findin').select();if($('#findin').value)doFind(false)}
+function closeFind(){$('#findbar').hidden=true;try{getSelection().removeAllRanges()}catch(e){}}
 function doFind(back){
   const q=$('#findin').value;if(!q){$('#findcnt').textContent='';return}
-  const t=cur();let ok=false;
-  try{const w=t.kind==='web'&&t.frame?t.frame.contentWindow:window;ok=w.find(q,false,back,true,false,false,false)}catch(e){ok=false}
+  const t=cur();if(!t)return;let ok=false;
+  try{
+    if(t.kind==='web'&&t.frame){ok=t.frame.contentWindow.find(q,false,back,true,false,false,false)}
+    else{
+      for(let i=0;i<24;i++){
+        if(!window.find(q,false,back,true,false,false,false))break;
+        const s=getSelection();const n=s&&s.anchorNode;
+        if(n&&t.view.contains(n)){ok=true;break}
+      }
+      if(!ok)try{getSelection().removeAllRanges()}catch(_){}
+    }
+  }catch(e){ok=false}
   $('#findcnt').textContent=ok?'':'0/0';
 }
 $('#findup').innerHTML=svg(P.up,18);$('#finddn').innerHTML=svg(P.down,18);$('#findx').innerHTML=svg(P.close,16);
-$('#findin').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doFind(e.shiftKey)}if(e.key==='Escape')$('#findbar').hidden=true});
+$('#findin').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doFind(e.shiftKey)}if(e.key==='Escape'){e.preventDefault();closeFind()}});
 $('#findin').addEventListener('input',()=>doFind(false));
-$('#findup').onclick=()=>doFind(true);$('#finddn').onclick=()=>doFind(false);$('#findx').onclick=()=>$('#findbar').hidden=true;
+$('#findup').onclick=()=>doFind(true);$('#finddn').onclick=()=>doFind(false);$('#findx').onclick=closeFind;
 
 /* ============ 清除数据 ============ */
 function clearDataDialog(){
@@ -2132,6 +2149,7 @@ function pageHistory(t,u){
   const root=el(`<div class="pg"><div class="ptop"><div class="ptitle">${svg(P.history,26)}历史记录</div><div class="psearch">${I.search}<input placeholder="搜索历史记录" spellcheck="false"></div></div><div class="pbody"><nav class="pside"><a class="on">${svg(P.history,20)}历史记录</a><a data-act="clear">${svg(P.del,20)}清除浏览数据</a></nav><div class="pmain"><div class="selbar" hidden></div><div class="plist"></div></div></div></div>`);
   const box=$('.plist',root),sb=$('.selbar',root);
   const draw=()=>{
+    for(const id of sel)if(!HIST.some(h=>h.id===id))sel.delete(id);
     const ql=q.toLowerCase();const list=HIST.filter(h=>!ql||h.title.toLowerCase().includes(ql)||h.url.toLowerCase().includes(ql)).slice(0,400);
     if(!list.length)box.innerHTML=`<div class="card"><div class="empty">${q?'未找到匹配的搜索结果':'没有历史记录'}</div></div>`;
     else{let h='',last='';list.forEach(x=>{const d=new Date(x.time),k=d.toDateString();if(k!==last){last=k;h+=`<div class="dayh">${dayLabel(d)}</div>`}
@@ -2142,7 +2160,7 @@ function pageHistory(t,u){
   $('input',root).value=q;t.redraw=draw;draw();
   $('input',root).addEventListener('input',e=>{q=e.target.value;draw()});
   root.addEventListener('click',e=>{
-    const d=e.target.closest('[data-d]');if(d){HIST=HIST.filter(x=>x.id!==d.dataset.d);saveH();onDataChange();return}
+    const d=e.target.closest('[data-d]');if(d){sel.delete(d.dataset.d);HIST=HIST.filter(x=>x.id!==d.dataset.d);saveH();onDataChange();return}
     const a=e.target.closest('[data-a]');if(a){if(a.dataset.a==='del'){HIST=HIST.filter(x=>!sel.has(x.id));sel.clear();saveH();onDataChange()}else{sel.clear();draw()}return}
     if(e.target.closest('[data-act=clear]'))clearDataDialog();
   });
@@ -2341,16 +2359,17 @@ function closeSide(){const sp=$('#sidepanel');sp.hidden=true;sp.innerHTML='';set
 function openCustomize(){
   closePopups();
   const sp=$('#sidepanel');sp.hidden=false;
-  const sw=(k,v)=>`<div class="sprow"><span class="l">${k}</span><label class="sw"><input type="checkbox" data-k="${v}" ${S[v]!==false&&S[v]?'checked':''}><span></span></label></div>`;
+  const sw=(k,v,def)=>`<div class="sprow"><span class="l">${k}</span><label class="sw"><input type="checkbox" data-k="${v}" ${(def?S[v]!==false:!!S[v])?'checked':''}><span></span></label></div>`;
   const draw=()=>{
     const ac=S.accent||'default';
     sp.innerHTML=`<div class="sph"><span class="t">自定义 Iridium</span><button class="tb" data-close="1" title="关闭">${svg(P.close,18)}</button></div><div class="spb">
     <h4>外观模式</h4><div class="seg">${[['system','跟随设备'],['light','浅色'],['dark','深色']].map(m=>`<button data-m="${m[0]}" class="${S.theme===m[0]?'on':''}">${m[1]}</button>`).join('')}</div>
     <h4>颜色主题</h4><div class="swg">${Object.keys(ACCENTS).map(k=>`<button class="swt${ac===k?' on':''}" data-a="${k}" title="${ACCENTS[k].n}" style="background:${ACCENTS[k].sw}">${ac===k?svg(P.check,18):''}</button>`).join('')}</div>
     <h4>新标签页背景</h4><div class="bgg">${BGS.map((b,i)=>`<button data-b="${i}" class="${S.ntpBg===b[1]?'on':''}" style="background:${b[1]||'var(--page2)'};color:${/2b2d42|0f2027/.test(b[1])?'#fff':'var(--text)'}">${b[0]}</button>`).join('')}</div>
-    <h4>新标签页</h4>${sw('显示快捷方式','showTiles').replace(/checked/,S.showTiles===false?'':'checked')}
+    <h4>新标签页</h4>${sw('显示快捷方式','showTiles',true)}
     <h4>工具栏</h4>${sw('显示书签栏','showBm')}${sw('显示主页按钮','showHome')}</div>`;
   };
+  window.refreshCustomize=()=>{if(!sp.hidden)draw()};
   draw();
   sp.onclick=e=>{
     if(e.target.closest('[data-close]')){closeSide();return}
@@ -2502,40 +2521,41 @@ document.addEventListener('keydown',e=>{
   else if(c&&e.shiftKey&&k==='t'){stop();reopenClosed()}
   else if(c&&e.shiftKey&&k==='n'){stop();newIncognito()}
   else if(c&&!e.shiftKey&&k==='n'){stop();newWindow()}
-  else if((c&&k==='l')||(e.altKey&&k==='d')||e.key==='F6'){stop();focusOmni()}
+  else if((c&&!e.shiftKey&&k==='l')||(e.altKey&&!c&&!e.shiftKey&&k==='d')||e.key==='F6'){stop();focusOmni()}
   else if((c&&!e.shiftKey&&k==='r')||(!c&&e.key==='F5')){stop();reload(t)}
-  else if(c&&!e.shiftKey&&k==='d'){stop();if(t.url&&!/newtab/.test(t.url))bookmarkBubble(t)}
+  else if(c&&!e.shiftKey&&k==='d'){stop();if(t&&t.url&&!isNtpUrl(t.url)&&t.kind!=='error')bookmarkBubble(t)}
   else if(c&&!e.shiftKey&&k==='h'){stop();openInternal('chrome://history/')}
   else if(c&&!e.shiftKey&&k==='j'){stop();openInternal('chrome://downloads/')}
   else if(c&&e.shiftKey&&k==='o'){stop();openInternal('chrome://bookmarks/')}
   else if(c&&e.shiftKey&&k==='b'){stop();S.showBm=!S.showBm;saveS();applySettings()}
-  else if(c&&e.shiftKey&&k==='delete'){stop();clearDataDialog()}
+  else if(c&&e.shiftKey&&(k==='delete'||k==='backspace')){stop();clearDataDialog()}
   else if(c&&!e.shiftKey&&k==='f'){stop();openFind()}
   else if(c&&(k==='+'||k==='=')){stop();zoomStep(t,1)}
   else if(c&&k==='-'){stop();zoomStep(t,-1)}
   else if(c&&k==='0'){stop();t.zoom=1;applyZoom(t);updateUI()}
   else if(c&&e.key==='Tab'){stop();const i=tabs.indexOf(t),n=tabs.length;activate(tabs[(i+(e.shiftKey?-1:1)+n)%n])}
-  else if(c&&/^[1-9]$/.test(e.key)){stop();const n=+e.key;activate(n===9?tabs[tabs.length-1]:tabs[n-1]||tabs[tabs.length-1])}
-  else if(e.altKey&&e.key==='ArrowLeft'){stop();goBack(t)}
-  else if(e.altKey&&e.key==='ArrowRight'){stop();goFwd(t)}
-  else if(e.altKey&&k==='home'){stop();go(t,'chrome://newtab/')}
+  else if(c&&/^[1-9]$/.test(e.key)){stop();const n=+e.key,tg=n===9?tabs[tabs.length-1]:tabs[n-1];if(tg)activate(tg)}
+  else if(e.altKey&&!c&&e.key==='ArrowLeft'){stop();goBack(t)}
+  else if(e.altKey&&!c&&e.key==='ArrowRight'){stop();goFwd(t)}
+  else if(e.altKey&&!c&&k==='home'){stop();go(t,'chrome://newtab/')}
   else if(e.key==='F11'){stop();toggleFull()}
   else if(e.key==='F12'||(c&&e.shiftKey&&k==='i')){stop();toast('开发者工具在 iframe 模式下不可用，请使用宿主浏览器的 F12')}
   else if(c&&e.shiftKey&&k==='a'){stop();$('#tabsearch').click()}
   else if(c&&e.shiftKey&&(e.key==='PageDown'||e.key==='PageUp')){stop();const i=tabs.indexOf(t),j=i+(e.key==='PageUp'?-1:1);if(j>=0&&j<tabs.length&&!!tabs[j].pinned===!!t.pinned){tabs.splice(i,1);tabs.splice(j,0,t);renderTabs();saveSession()}}
   else if(c&&!e.shiftKey&&k==='p'){stop();openPrint(t)}
   else if(c&&(e.key==='PageDown'||e.key==='PageUp')){stop();const i=tabs.indexOf(t),n=tabs.length;activate(tabs[(i+(e.key==='PageUp'?-1:1)+n)%n])}
-  else if(e.key==='F3'||(c&&k==='g')){stop();doFind(e.shiftKey)}
+  else if(e.key==='F3'||(c&&k==='g')){stop();if($('#findbar').hidden&&!$('#findin').value)openFind();else doFind(e.shiftKey)}
   else if(c&&k==='e'){stop();focusOmni()}
   else if(c&&k==='s'){stop();toast('另存为：当前版本暂不支持')}
-  else if(e.altKey&&(k==='f'||k==='e')){stop();mainMenu()}
+  else if(e.altKey&&!c&&!e.shiftKey&&(k==='f'||k==='e')){stop();mainMenu()}
   else if(!EMB&&e.altKey&&k==='['){stop();snapWin('l')}
   else if(!EMB&&e.altKey&&k===']'){stop();snapWin('r')}
   else if(!EMB&&e.altKey&&k==='-'){stop();win.min=true;syncWin()}
   else if(!EMB&&e.altKey&&k==='='){stop();win.max=!win.max;syncWin()}
-  else if(e.shiftKey&&e.key==='Escape'){stop();openTaskMgr()}
-  else if(e.key==='Escape'){closePopups();closeOS();hideHC();if(t&&t.loading)stop_(t)}
+  else if((e.shiftKey&&!c&&!e.altKey||e.metaKey&&!e.ctrlKey&&!e.altKey&&!e.shiftKey)&&e.key==='Escape'){stop();openTaskMgr()}
+  else if(e.key==='Escape'){if(layer.firstChild||osOpen){e.preventDefault();closePopups();closeOS()}hideHC()}
 },true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!e.defaultPrevented&&win.open&&!win.min&&!document.body.classList.contains('locked')){const t=cur();if(t&&t.loading)stop_(t)}});
 const stop_=stop;
 $('#toolbar').addEventListener('keydown',e=>{if((e.key!=='ArrowLeft'&&e.key!=='ArrowRight')||e.target.tagName!=='BUTTON')return;const bs=$$('#toolbar button:not(:disabled):not(.sx)').filter(b=>b.offsetParent);const i=bs.indexOf(e.target);if(i<0)return;e.preventDefault();bs[(i+(e.key==='ArrowRight'?1:-1)+bs.length)%bs.length].focus()});
 document.addEventListener('wheel',e=>{if(e.ctrlKey&&win.open&&cur()){e.preventDefault();zoomStep(cur(),e.deltaY<0?1:-1)}},{passive:false});
@@ -2553,7 +2573,9 @@ Object.assign(P,{
   sun:'M6.76 4.84l-1.8-1.79-1.41 1.41 1.79 1.79 1.42-1.41zM4 10.5H1v2h3v-2zm9-9.95h-2V3.5h2V.55zm7.45 3.91l-1.41-1.41-1.79 1.79 1.41 1.41 1.79-1.79zm-3.21 13.7l1.79 1.8 1.41-1.41-1.8-1.79-1.4 1.4zM20 10.5v2h3v-2h-3zm-8-5c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm-1 16.95h2V19.5h-2v2.95zm-7.45-3.91l1.41 1.41 1.79-1.8-1.41-1.41-1.79 1.8z',
   cam:'M9 2L7.17 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2h-3.17L15 2H9zm3 15c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5z',
   power:'M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z',
-  cal:'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z'
+  cal:'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z',
+  wifiOff:'M22.99 9C19.15 5.16 13.8 3.76 8.84 4.78l2.52 2.52c3.47-.17 6.99 1.05 9.63 3.7l2-2zm-4 4c-1.29-1.29-2.84-2.13-4.49-2.56l3.53 3.53.96-.97zM2 3.05 5.07 6.1C3.6 6.82 2.22 7.78 1 9l2 2c1.23-1.23 2.65-2.16 4.17-2.78l2.24 2.24C7.79 10.89 6.27 11.74 5 13l2 2c1.35-1.35 3.11-2.04 4.89-2.06l7.08 7.08L20.24 18.75 3.27 1.78 2 3.05zM9 17l3 3 3-3c-1.65-1.66-4.34-1.66-6 0z',
+  dnd:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z'
 });
 const OS=Object.assign({dark:null,wall:0,wifi:true,bt:false,dnd:false,night:false,bright:100,vol:70},store.get('os',{}));
 const saveOS=()=>store.set('os',OS);
@@ -2576,16 +2598,21 @@ function applyOS(){
   $('#night').style.opacity=OS.night?.35:0;
   renderStatus();
 }
+function batIcon(l,c){
+  const h=Math.max(1,Math.round(Math.min(100,Math.max(0,l))/100*12.5)),y=20.5-h;
+  return `<svg viewBox="0 0 24 24" width="18" height="18"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z" fill="currentColor" opacity=".32"/><rect x="7" y="${y}" width="10" height="${h}" rx="1" fill="currentColor"/>${c?'<path d="M13 7l-3.5 6h2.5v4l3.5-6H13z" fill="#fff" opacity=".9"/>':''}</svg>`;
+}
 function renderStatus(){
   const s=$('#status');if(!s)return;
-  s.innerHTML=`<span style="display:flex;opacity:${OS.wifi?1:.4}">${svg(P.wifi,18)}</span>${OS.dnd?`<span style="display:flex">${svg(P.bell,16)}</span>`:''}<span style="display:flex">${svg(P.bat,18)}</span><span id="clock">${hhmm()}</span>`;
-  s.title=dateStr()+' '+hhmm()+'\n电池电量 '+BAT.l+'%';
+  const wf=OS.wifi&&navigator.onLine;
+  s.innerHTML=`<span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span>${OS.dnd?`<span style="display:flex">${svg(P.dnd,16)}</span>`:''}<span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span id="clock">${hhmm()}</span>`;
+  s.title=dateStr()+' '+hhmm()+'\n电池电量 '+BAT.l+'%'+(BAT.c?'（正在充电）':'');
 }
 mq.addEventListener&&mq.addEventListener('change',()=>{if(OS.dark==null){applyOS();applySettings()}});
 setInterval(renderStatus,15000);
 
 /* 应用 */
-const APPS=[{id:'iri',n:'Iridium'},{id:'files',n:'文件',ic:P.folder,bg:'#1a73e8'},{id:'set',n:'设置',ic:P.gear,bg:'#5f6368'},{id:'cam',n:'相机',ic:P.cam,bg:'#d93025'},{id:'cal',n:'日历',ic:P.cal,bg:'#1a73e8'},{id:'photos',n:'图库',ic:P.bm,bg:'#f29900'}];
+const APPS=[{id:'iri',n:'Iridium',k:'browser chrome'},{id:'files',n:'文件',k:'files',ic:P.folder,bg:'#1a73e8'},{id:'set',n:'设置',k:'settings',ic:P.gear,bg:'#5f6368'},{id:'cam',n:'相机',k:'camera',ic:P.cam,bg:'#d93025'},{id:'cal',n:'日历',k:'calendar',ic:P.cal,bg:'#1a73e8'},{id:'photos',n:'图库',k:'photos gallery',ic:P.bm,bg:'#f29900'}];
 const appIcon=(a,s=44)=>a.id==='iri'?IRI(s):`<span class="aic" style="width:${s}px;height:${s}px;background:${a.bg}">${svg(a.ic,Math.round(s*.55))}</span>`;
 function openApp(id){
   closeOS();
@@ -2610,10 +2637,11 @@ function toggleLauncher(){
   const b=el(`<div class="osb" id="lc"><div class="lsearch">${svg(P.search,22)}<input placeholder="搜索您的设备、应用、设置和网络" spellcheck="false"></div><div class="lh">应用</div><div class="lgrid"></div></div>`);
   document.body.append(b);
   const g=$('.lgrid',b),inp=$('input',b);
-  const draw=()=>{const q=inp.value.trim().toLowerCase();g.innerHTML=APPS.filter(a=>!q||a.n.toLowerCase().includes(q)).map(a=>`<button class="lapp" data-a="${a.id}">${appIcon(a)}<span>${a.n}</span></button>`).join('')||`<div style="grid-column:1/-1;padding:28px 0;text-align:center;color:var(--os2)">按 Enter 键在网络上搜索“${esc(inp.value)}”</div>`};
+  const match=q=>APPS.filter(a=>!q||a.n.toLowerCase().includes(q)||(a.k&&a.k.includes(q)));
+  const draw=()=>{const q=inp.value.trim().toLowerCase();g.innerHTML=match(q).map(a=>`<button class="lapp" data-a="${a.id}">${appIcon(a)}<span>${esc(a.n)}</span></button>`).join('')||`<div style="grid-column:1/-1;padding:28px 0;text-align:center;color:var(--os2)">按 Enter 键在网络上搜索“${esc(inp.value)}”</div>`};
   draw();inp.oninput=draw;inp.focus();
   inp.onkeydown=e=>{
-    if(e.key==='Enter'&&inp.value.trim()){const v=inp.value;closeOS();WM.openUrl(v)}
+    if(e.key==='Enter'&&inp.value.trim()){const v=inp.value.trim(),m=match(v.toLowerCase());if(m.length&&!looksLikeUrl(v))openApp(m[0].id);else{closeOS();WM.openUrl(v)}}
   };
   b.onclick=e=>{const a=e.target.closest('[data-a]');if(a)openApp(a.dataset.a)};
 }
@@ -2642,6 +2670,7 @@ function toggleQS(cal){
     else if(k==='prev'){calM=new Date(calM.getFullYear(),calM.getMonth()-1,1);drawQS(b)}
     else if(k==='next'){calM=new Date(calM.getFullYear(),calM.getMonth()+1,1);drawQS(b)}
     else if(k==='lock')lockScreen();
+    else if(k==='signout')lockScreen(true);
     else if(k==='power')powerOff();
     else if(k==='set'){closeOS();openOsSettings()}
   });
@@ -2657,17 +2686,17 @@ function drawQS(b){
   }
   const tile=(k,ic,l,s,on)=>`<button class="qt${on?' on':''}" data-t="${k}"><span class="qi">${svg(ic,20)}</span><span class="qx"><b>${l}</b><i>${s}</i></span></button>`;
   b.innerHTML=`<button class="qdate" data-a="cal">${dateStr()}</button>
-  <div class="qtiles">${tile('wifi',P.wifi,'网络',OS.wifi?'Iridium-5G':'已关闭',OS.wifi)}${tile('bt',P.bt,'蓝牙',OS.bt?'已开启':'已关闭',OS.bt)}${tile('dnd',P.bell,'勿扰模式',OS.dnd?'已开启':'已关闭',OS.dnd)}${tile('dark',P.moon,'深色主题',isOsDark()?'已开启':'已关闭',isOsDark())}${tile('night',P.sun,'夜间模式',OS.night?'已开启':'已关闭',OS.night)}${tile('shot',P.cam,'屏幕截图','',false)}</div>
+  <div class="qtiles">${tile('wifi',P.wifi,'网络',OS.wifi?'Iridium-5G':'已关闭',OS.wifi)}${tile('bt',P.bt,'蓝牙',OS.bt?'已开启':'已关闭',OS.bt)}${tile('dnd',P.dnd,'勿扰模式',OS.dnd?'已开启':'已关闭',OS.dnd)}${tile('dark',P.moon,'深色主题',isOsDark()?'已开启':'已关闭',isOsDark())}${tile('night',P.sun,'夜间模式',OS.night?'已开启':'已关闭',OS.night)}${tile('shot',P.cam,'屏幕截图','',false)}</div>
   <div class="qsl">${svg(P.bright,20)}<input type="range" min="20" max="100" value="${OS.bright}" data-s="bright" aria-label="亮度"></div>
   <div class="qsl"><button data-m="vol" title="${OS.vol?'静音':'取消静音'}" style="display:flex">${svg(OS.vol?P.vol:P.volOff,20)}</button><input type="range" min="0" max="100" value="${OS.vol}" data-s="vol" aria-label="音量"></div>
-  <div class="qbot"><button class="qpill" data-a="lock">退出登录</button><button class="qc" data-a="lock" title="锁定">${svg(P.lock,20)}</button><button class="qc" data-a="power" title="关机">${svg(P.power,20)}</button><span style="flex:1"></span><span class="qbat">${BAT.l}%${BAT.c?' · 已接通电源':''}</span><button class="qc" data-a="set" title="设置">${svg(P.gear,20)}</button></div>`;
+  <div class="qbot"><button class="qpill" data-a="signout">退出登录</button><button class="qc" data-a="lock" title="锁定">${svg(P.lock,20)}</button><button class="qc" data-a="power" title="关机">${svg(P.power,20)}</button><span style="flex:1"></span><span class="qbat">${BAT.l}%${BAT.c?' · 已接通电源':''}</span><button class="qc" data-a="set" title="设置">${svg(P.gear,20)}</button></div>`;
 }
 
 /* 锁屏 / 关机 */
-function lockScreen(){
+function lockScreen(signedOut){
   closeOS();if($('#lock'))return;document.body.classList.add('locked');
   try{if(document.activeElement)document.activeElement.blur();window.focus()}catch(e){}
-  const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lt"><div class="tm">${hhmm()}</div><div>${dateStr()}</div></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:18px">User</div><button class="btn pri" style="color:#fff">点击或按 Enter 键解锁</button></div></div>`);
+  const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lt"><div class="tm">${hhmm()}</div><div>${dateStr()}</div></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:18px">User</div><button class="btn pri" style="color:#fff">${signedOut?'点击或按 Enter 键登录':'点击或按 Enter 键解锁'}</button></div></div>`);
   document.body.append(d);$('button',d).focus();
   const un=()=>{d.remove();document.body.classList.remove('locked');document.removeEventListener('keydown',kh,true)};
   const kh=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();un()}};
@@ -2821,7 +2850,7 @@ $('#shelf').addEventListener('contextmenu',wallMenu);
   /* --- Chromium 风格工具提示：接管原生 title --- */
   const tip=document.createElement('div');tip.id='tip';document.body.append(tip);
   let tgt=null,tm=0,lastShown=0;
-  const conv=n=>{if(n.nodeType!==1)return;if(n.hasAttribute&&n.hasAttribute('title')&&n.tagName!=='IFRAME'){const v=n.getAttribute('title');if(v){n.dataset.tt=v}n.removeAttribute('title')}
+  const conv=n=>{if(n.nodeType!==1)return;if(n.hasAttribute&&n.hasAttribute('title')&&n.tagName!=='IFRAME'){const v=n.getAttribute('title');if(v)n.dataset.tt=v;else delete n.dataset.tt;n.removeAttribute('title')}
     if(n.querySelectorAll)n.querySelectorAll('[title]').forEach(x=>{if(x.tagName==='IFRAME')return;const v=x.getAttribute('title');if(v)x.dataset.tt=v;x.removeAttribute('title')})};
   conv(document.body);
   new MutationObserver(ms=>{for(const m of ms){if(m.type==='attributes'){conv(m.target);if(m.target===tgt&&tip.classList.contains('on'))tip.textContent=tgt.dataset.tt||''}else m.addedNodes.forEach(conv)}})
@@ -2994,7 +3023,7 @@ function statusBubble(t){
         if(t.kind!=='web'&&t.view&&t.view.firstElementChild&&!t.view.querySelector('iframe')){
           const W=Math.max(600,content.clientWidth||1000),H=Math.max(360,content.clientHeight||600),k=240/W;
           const inn=document.createElement('div');inn.className='hcin';inn.style.cssText='width:'+W+'px;height:'+H+'px;transform:scale('+k+')';
-          inn.innerHTML=t.view.innerHTML;inn.querySelectorAll('input,textarea').forEach(x=>{x.tabIndex=-1});
+          inn.innerHTML=t.view.innerHTML;inn.querySelectorAll('[id]').forEach(x=>x.removeAttribute('id'));inn.querySelectorAll('input,textarea').forEach(x=>{x.tabIndex=-1});
           pv.append(inn);has=true;
         }else if(t.kind==='web'||t.kind==='error'){
           const ph=document.createElement('div');ph.className='hcph';ph.innerHTML=fav(t.kind==='error'?'':t.url,32);pv.append(ph);has=true;
@@ -3052,7 +3081,8 @@ function draw(){
   $('tbody',tm).innerHTML=rs.map(r=>`<tr data-id="${r.id}" class="${r.id===selId?'sel':''}"><td class="nm"><span style="display:flex;flex:none">${r.icon}</span><span class="tt">${esc(r.name)}</span></td><td class="n">${Math.round(r.mem).toLocaleString('en-US')}K</td><td class="n">${r.cpu.toFixed(1)}</td><td class="n">${r.net?(r.net/1024).toFixed(1)+' kB/s':'0'}</td><td class="n">${r.pid}</td></tr>`).join('');
   $('.btn',tm).disabled=!(sel&&sel.tab);
 }
-function closeTM(){if(!tm)return;const x=tm;tm=null;clearInterval(timer);x.classList.add('out');setTimeout(()=>x.remove(),120)}
+let tmEsc=null;
+function closeTM(){if(!tm)return;const x=tm;tm=null;clearInterval(timer);if(tmEsc){document.removeEventListener('keydown',tmEsc,true);tmEsc=null}x.classList.add('out');setTimeout(()=>x.remove(),120)}
 window.openTaskMgr=function(){
   if(tm&&tm.isConnected){tm.classList.remove('tmpulse');void tm.offsetWidth;tm.classList.add('tmpulse');tm.focus();return}
   closePopups();
@@ -3066,7 +3096,8 @@ window.openTaskMgr=function(){
   const kill=()=>{const t=tabs.find(x=>x.id===selId);if(t){selId=null;closeTab(t);setTimeout(()=>{draw();me.focus()},60)}};
   me.addEventListener('mousedown',e=>{if(!e.target.closest('button'))setTimeout(()=>me.focus(),0)});
   $('.btn',me).onclick=kill;
-  me.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();closeTM()}else if(e.key==='Delete'){kill()}});
+  tmEsc=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();closeTM()}};document.addEventListener('keydown',tmEsc,true);
+  me.addEventListener('keydown',e=>{if(e.key==='Delete'){kill()}});
   const hd=$('.tmh',me);let dr=null;
   hd.addEventListener('pointerdown',e=>{if(e.target.closest('button'))return;const r=me.getBoundingClientRect();dr={x:e.clientX-r.left,y:e.clientY-r.top};me.style.margin='0';me.style.left=r.left+'px';me.style.top=r.top+'px';hd.setPointerCapture(e.pointerId)});
   hd.addEventListener('pointermove',e=>{if(!dr)return;me.style.left=Math.max(-300,Math.min(innerWidth-120,e.clientX-dr.x))+'px';me.style.top=Math.max(0,Math.min(innerHeight-40,e.clientY-dr.y))+'px'});
@@ -3091,7 +3122,7 @@ showHC=function(te){
 window.openPrint=function(t){
   t=t||cur();if(!t||document.getElementById('printov'))return;
   closePopups();
-  const title=t.title||'无标题',url=/^chrome:\/\/newtab/.test(t.url||'')?'chrome://newtab/':(t.url||'');
+  const title=t.title||'无标题',url=isNtpUrl(t.url)?'chrome://newtab/':(t.url||'');
   const d=new Date(),p2=n=>String(n).padStart(2,'0');
   const ds=`${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()} ${p2(d.getHours())}:${p2(d.getMinutes())}`;
   const lines=[92,88,95,60,0,90,84,93,70,0,88,76,92,40,0,86,94,90,52,0,91,87,95,62].map(w=>w?`<i class="pvln" style="width:${w}%"></i>`:'<i class="pvgap"></i>').join('');
@@ -3131,14 +3162,16 @@ window.openPrint=function(t){
     q('pv-color-row').hidden=!host;pr.classList.toggle('gray',host&&q('pv-color').value==='g');
     q('pv-range-row').hidden=q('pv-pages').value!=='c';
     q('pv-ok').textContent=host?'打印':'保存';
+    const cp=Math.max(1,Math.min(999,+q('pv-copies').value||1));$('.pvsheets',ov).textContent=cp+' 张纸';
   };
   ov.addEventListener('input',upd);ov.addEventListener('change',upd);upd();
   const more=q('pv-more');const tgl=()=>{more.classList.toggle('on');q('pv-adv').classList.toggle('on')};
   more.onclick=tgl;more.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();tgl()}};
-  const close=()=>{if(ov._c)return;ov._c=1;ov.classList.add('out');setTimeout(()=>ov.remove(),130)};
+  const pk=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();close()}};document.addEventListener('keydown',pk,true);
+  const close=()=>{if(ov._c)return;ov._c=1;document.removeEventListener('keydown',pk,true);ov.classList.add('out');setTimeout(()=>ov.remove(),130)};
   q('pv-cancel').onclick=close;
   q('pv-ok').onclick=()=>{close();setTimeout(()=>{try{t.kind==='web'&&t.frame?t.frame.contentWindow.print():window.print()}catch(_){window.print()}},170)};
-  ov.addEventListener('keydown',e=>{if(e.key==='Escape'){e.stopPropagation();close()}else if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type==='number'){q('pv-ok').click()}});
+  ov.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.type==='number'){q('pv-ok').click()}});
   ov.addEventListener('mousedown',e=>{if(e.target===ov){const d=$('.pvd',ov);d.classList.remove('pvbump');void d.offsetWidth;d.classList.add('pvbump')}});
   q('pv-ok').focus();
 };
@@ -3173,7 +3206,8 @@ const KEY='iridium.downloads',EXT=/\.(zip|rar|7z|tar|gz|tgz|bz2|xz|exe|msi|dmg|p
 const TYPES=[[/zip|rar|7z|tar|gz|tgz|bz2|xz/,'#f9ab00'],[/pdf/,'#d93025'],[/docx?|epub/,'#1a73e8'],[/xlsx?|csv/,'#188038'],[/pptx?/,'#e8710a'],[/mp3|flac|wav|ogg/,'#a142f4'],[/mp4|mkv|avi|mov|webm/,'#d01884'],[/exe|msi|dmg|pkg|deb|rpm|apk|appimage|jar|bin|iso|img/,'#5f6368']];
 const PATH={pause:'M6 19h4V5H6v14zm8-14v14h4V5h-4z',play:'M8 5v14l11-7z',x:'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',more:'M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z',folder:'M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',retry:'M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'};
 let DL=[];
-try{DL=JSON.parse(localStorage.getItem(KEY)||'[]').map(d=>Object.assign(d,{state:d.state==='prog'||d.state==='pause'?'canc':d.state}))}catch(e){}
+const loadDL=()=>{if(INC)return[];try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a.map(d=>Object.assign(d,{state:d.state==='prog'||d.state==='pause'?'canc':d.state})):[]}catch(e){return[]}};
+DL=loadDL();window.addEventListener('storage',e=>{if(e.key===KEY&&!INC){const act=DL.filter(d=>live[d.id]);const ids=new Set(act.map(d=>d.id));DL=[...act,...loadDL().filter(d=>!ids.has(d.id))];render()}});
 const live={};/* id -> {ctl,gate} */
 const save=()=>{if(INC)return;try{localStorage.setItem(KEY,JSON.stringify(DL.slice(0,60).map(d=>({id:d.id,name:d.name,url:d.url,size:d.size,got:d.got,state:d.state,ts:d.ts}))))}catch(e){}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -3215,7 +3249,7 @@ function rowHtml(d,page){
   const bar=act?`<div class="dlbar${d.size?'':' ind'}"><i style="width:${d.size?Math.min(100,d.got/d.size*100):0}%"></i></div>`:'';
   const err=d.state==='fail';
   if(page){
-    return `<div class="dlrow ${d.state==='canc'?'canc':''}${d.state==='gone'?' gone':''}" data-id="${d.id}"><div class="dlt">${new Date(d.ts).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false})}</div><div class="dli">${fileIcon(d.name,32)}</div><div class="dlm"><a data-a="open">${esc(d.name)}</a><div class="dls" style="white-space:normal">${esc(d.url.length>90?d.url.slice(0,90)+'…':d.url)}</div><div class="dls${err?' dlerr':''}">${esc(status(d))}</div>${bar}<div style="margin-top:6px">${act?`<a class="dllk" data-a="${d.state==='pause'?'resume':'pause'}">${d.state==='pause'?'继续':'暂停'}</a><a class="dllk" data-a="cancel">取消</a>`:(d.state==='done'?'<a class="dllk" data-a="show">在文件夹中显示</a>':'<a class="dllk" data-a="retry">重试</a>')}</div></div><div class="dlx"><button data-a="remove" title="从列表中删除">${sv(PATH.x)}</button></div></div>`;
+    return `<div class="dlrow ${d.state==='canc'?'canc':''}${d.state==='gone'?' gone':''}" data-id="${d.id}"><div class="dlt">${new Date(d.ts).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false})}</div><div class="dli">${fileIcon(d.name,32)}</div><div class="dlm">${d.state==='done'?`<a data-a="open">${esc(d.name)}</a>`:`<span>${esc(d.name)}</span>`}<div class="dls" style="white-space:normal">${esc(d.url.length>90?d.url.slice(0,90)+'…':d.url)}</div><div class="dls${err?' dlerr':''}">${esc(status(d))}</div>${bar}<div style="margin-top:6px">${act?`<a class="dllk" data-a="${d.state==='pause'?'resume':'pause'}">${d.state==='pause'?'继续':'暂停'}</a><a class="dllk" data-a="cancel">取消</a>`:(d.state==='done'?'<a class="dllk" data-a="show">在文件夹中显示</a>':'<a class="dllk" data-a="retry">重试</a>')}</div></div><div class="dlx"><button data-a="remove" title="从列表中删除">${sv(PATH.x)}</button></div></div>`;
   }
   const acts=act?`<button data-a="${d.state==='pause'?'resume':'pause'}" title="${d.state==='pause'?'继续':'暂停'}">${sv(d.state==='pause'?PATH.play:PATH.pause)}</button><button data-a="cancel" title="取消">${sv(PATH.x)}</button>`:
     (d.state==='done'?`<button data-a="show" title="在文件夹中显示">${sv(PATH.folder)}</button><button data-a="more" title="更多操作">${sv(PATH.more)}</button>`:`<button data-a="retry" title="重试">${sv(PATH.retry)}</button><button data-a="remove" title="从列表中删除">${sv(PATH.x)}</button>`);
@@ -3246,7 +3280,7 @@ function act(e,root){
   if(a==='pause'){d.state='pause';live[d.id]&&(live[d.id].gate=new Promise(r=>live[d.id].go=r));d.speed=0}
   else if(a==='resume'){d.state='prog';live[d.id]&&live[d.id].go&&live[d.id].go();d.lt=performance.now();d.lg=d.got}
   else if(a==='cancel'){d.state='canc';live[d.id]&&(live[d.id].ctl.abort(),live[d.id].go&&live[d.id].go());delete live[d.id]}
-  else if(a==='remove'){DL=DL.filter(x=>x!==d)}
+  else if(a==='remove'){if(d.blob)try{URL.revokeObjectURL(d.blob)}catch(e){}DL=DL.filter(x=>x!==d)}
   else if(a==='retry'){DL=DL.filter(x=>x!==d);start(d.url,d.name)}
   else if(a==='show'){toast('已在文件夹中显示：我的文件/下载/'+d.name)}
   else if(a==='open'){if(d.blob)window.open(d.blob,'_blank');else if(d.state==='done')toast('无法打开文件：已被移动或删除');}
@@ -3265,7 +3299,7 @@ window.dlFill=function(page){
   };
   paint();card._paint=paint;pages.add(card);
   inp&&inp.addEventListener('input',paint);
-  card.addEventListener('click',e=>{const c=e.target.closest('[data-a=clear]');if(c){DL=DL.filter(d=>d.state==='prog'||d.state==='pause');save();render();return}act(e,card)});
+  card.addEventListener('click',e=>{const c=e.target.closest('[data-a=clear]');if(c){DL.forEach(d=>{if(d.state!=='prog'&&d.state!=='pause'&&d.blob)try{URL.revokeObjectURL(d.blob)}catch(_){}});DL=DL.filter(d=>d.state==='prog'||d.state==='pause');save();render();return}act(e,card)});
 };
 function render(){
   syncBtn();fillBubble();
@@ -3369,6 +3403,7 @@ render();
   }
   function detachTab(t){
     const i=tabs.indexOf(t);if(i<0)return;
+    clearTimeout(t._lt);if(t.el)try{tro.unobserve(t.el)}catch(e){}
     tabs.splice(i,1);t.view.remove();
     if(activeTab===t)activate(tabs[Math.min(i,tabs.length-1)]);
     renderTabs();saveSession();
@@ -3460,7 +3495,8 @@ render();
   addEventListener('focus',()=>post('focus'));
   document.addEventListener('keydown',e=>{
     let a=null;const c=e.ctrlKey||e.metaKey;
-    if(e.altKey&&!c&&!e.shiftKey){
+    if(e.altKey&&!c&&e.shiftKey&&e.code==='Backquote')a='cycleprev';
+    else if(e.altKey&&!c&&!e.shiftKey){
       if(e.code==='BracketLeft')a='snapl';else if(e.code==='BracketRight')a='snapr';
       else if(e.code==='Minus')a='min';else if(e.code==='Equal')a='togglemax';else if(e.code==='Backquote')a='cycle';
     }else if(c&&e.altKey&&!e.shiftKey&&e.code==='KeyW')a='overview';
