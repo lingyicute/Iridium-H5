@@ -1930,7 +1930,7 @@ function editBookmark(node,init={}){
   const body=`<label class="fld"><span>名称</span><input id="bn" value="${esc(node?node.title:(init.title||''))}"></label>${type==='url'?`<label class="fld"><span>网址</span><input id="bu" value="${esc(node?node.url:(init.url||'https://'))}"></label>`:''}<label class="fld"><span>文件夹</span><select id="bf">${folderOptions(parent)}</select></label>`;
   dialog(isNew?(type==='url'?'添加书签':'添加文件夹'):(type==='url'?'修改书签':'修改文件夹'),body,[{text:'取消'},{text:'保存',pri:true,fn:ov=>{
     const title=$('#bn',ov).value.trim()||'无标题',f=$('#bf',ov).value;let url=type==='url'?$('#bu',ov).value.trim():'';
-    if(type==='url'){if(!url)return false;url=resolve(url)}
+    if(type==='url'){if(!url||/^[a-z][a-z0-9+.-]*:\/\/$/i.test(url))return false;url=resolve(url)}
     if(node){node.title=title;if(type==='url')node.url=url;if(parentOf(node.id)!==f&&!(node.type==='folder'&&(f===node.id||findIn(node,f)))){removeNode(node.id);listOf(f).push(node)}}
     else listOf(f).push(type==='url'?{id:uid(),type:'url',title,url}:{id:uid(),type:'folder',title,children:[]});
     saveBM();
@@ -2134,7 +2134,7 @@ function pageNTP(t){
     tiles.innerHTML=S.shortcuts.map((s,i)=>`<div class="tile" data-i="${i}"><button class="tmore" data-m="${i}" title="更多操作">${svg(P.more,16)}</button><div class="tico">${fav(s.u,26)}</div><div class="tname">${esc(s.t)}</div></div>`).join('')+(S.shortcuts.length<10?`<div class="tile" data-add="1"><div class="tico">${svg(P.add,24)}</div><div class="tname">添加快捷方式</div></div>`:'');
   };
   draw();
-  const scDlg=i=>{const s=i==null?{t:'',u:'https://'}:S.shortcuts[i];dialog(i==null?'添加快捷方式':'修改快捷方式',`<label class="fld"><span>名称</span><input id="sn" value="${esc(s.t)}"></label><label class="fld"><span>网址</span><input id="su" value="${esc(s.u)}"></label>`,[{text:'取消'},{text:'完成',pri:true,fn:ov=>{const u=$('#su',ov).value.trim();if(!u)return false;const o={t:$('#sn',ov).value.trim()||hostOf(resolve(u)),u:resolve(u)};if(i==null)S.shortcuts.push(o);else S.shortcuts[i]=o;saveS();draw()}}])};
+  const scDlg=i=>{const s=i==null?{t:'',u:'https://'}:S.shortcuts[i];dialog(i==null?'添加快捷方式':'修改快捷方式',`<label class="fld"><span>名称</span><input id="sn" value="${esc(s.t)}"></label><label class="fld"><span>网址</span><input id="su" value="${esc(s.u)}"></label>`,[{text:'取消'},{text:'完成',pri:true,fn:ov=>{const u=$('#su',ov).value.trim();if(!u||/^[a-z][a-z0-9+.-]*:\/\/$/i.test(u))return false;const o={t:$('#sn',ov).value.trim()||hostOf(resolve(u)),u:resolve(u)};if(i==null)S.shortcuts.push(o);else S.shortcuts[i]=o;saveS();draw()}}])};
   tiles.addEventListener('click',e=>{
     const m=e.target.closest('.tmore');
     if(m){e.stopPropagation();const i=+m.dataset.m,r=m.getBoundingClientRect();showMenu([{label:'修改快捷方式',fn:()=>scDlg(i)},{label:'移除',fn:()=>{S.shortcuts.splice(i,1);saveS();draw()}}],r.left,r.bottom+2);return}
