@@ -1287,7 +1287,7 @@ function closePopups(){
 }
 document.addEventListener('mousedown',e=>{wasOwner=layer.dataset.owner||'';if(!e.target.closest('.popup'))closePopups()},true);
 window.addEventListener('blur',()=>{closePopups();hideSugg()});
-function toggler(btn,owner,fn){btn.addEventListener('click',e=>{if(wasOwner===owner){wasOwner='';return}fn(e)})}
+function toggler(btn,owner,fn){btn.addEventListener('click',e=>{const was=wasOwner;wasOwner='';if(e.detail>0&&was===owner)return;fn(e)})}
 function popBottom(){return innerHeight-(document.body.classList.contains('fs')||EMB?0:48)-4}
 function placeAt(m,x,y,right){
   m.style.visibility='hidden';layer.append(m);
@@ -1910,7 +1910,7 @@ $('#bmbar').addEventListener('click',e=>{
   const id=b.dataset.id;
   if(id==='other'){menuBelow(b,[{label:'书签栏',icon:svg(P.folder,18),sub:()=>bmMenuItems(BM.bar)},{label:'其他书签',icon:svg(P.folder,18),sub:()=>bmMenuItems(BM.other)},'-',{label:'书签管理器',key:'Ctrl+Shift+O',fn:()=>openInternal('chrome://bookmarks/')}],'bmother',true);return}
   const n=findNode(id);if(!n)return;
-  if(n.type==='folder'){if(wasOwner==='bm'+id){wasOwner='';return}const r=b.getBoundingClientRect();showMenu(bmMenuItems(n.children),r.left,r.bottom+2,{owner:'bm'+id})}
+  if(n.type==='folder'){const was=wasOwner;wasOwner='';if(e.detail>0&&was==='bm'+id)return;const r=b.getBoundingClientRect();showMenu(bmMenuItems(n.children),r.left,r.bottom+2,{owner:'bm'+id})}
   else if(e.ctrlKey||e.metaKey)newTab(n.url,{bg:true,afterActive:true});else go(cur(),n.url);
 });
 $('#bmbar').addEventListener('auxclick',e=>{const b=e.target.closest('.bm');if(b&&e.button===1){const n=findNode(b.dataset.id);n&&n.type==='url'&&newTab(n.url,{bg:true,afterActive:true})}});
@@ -1964,7 +1964,7 @@ $('#home').onclick=()=>go(cur(),'chrome://newtab/');
 $('#newtab').onclick=()=>newTab();
 $('#back').addEventListener('contextmenu',e=>{e.preventDefault();const t=cur();if(t.idx>0)showMenu(t.hist.slice(0,t.idx).map((h,i)=>({label:h.title||h.url,icon:fav(h.url,16),fn:()=>{t.idx=i;load(t,h.url)}})).reverse(),e.clientX,e.clientY)});
 $('#fwd').addEventListener('contextmenu',e=>{e.preventDefault();const t=cur();if(t.idx<t.hist.length-1)showMenu(t.hist.slice(t.idx+1).map((h,i)=>({label:h.title||h.url,icon:fav(h.url,16),fn:()=>{t.idx=t.idx+1+i;load(t,h.url)}})),e.clientX,e.clientY)});
-$('#zoomBtn').onclick=()=>{if(wasOwner==='zoom'){wasOwner='';return}showZoomBubble()};
+$('#zoomBtn').onclick=e=>{const was=wasOwner;wasOwner='';if(e.detail>0&&was==='zoom')return;showZoomBubble()};
 function zoomRow(){return {custom:()=>{
   const r=el(`<div class="zrow"><span class="ic"></span><span class="lb">缩放</span><button data-z="-1" title="缩小">${svg('M19 13H5v-2h14v2z',18)}</button><span class="zv"></span><button data-z="1" title="放大">${svg(P.add,18)}</button><span class="zsep"></span><button data-z="f" title="全屏 (F11)">${svg(P.full,18)}</button></div>`);
   const upd=()=>{$('.zv',r).textContent=Math.round(cur().zoom*100)+'%'};upd();
