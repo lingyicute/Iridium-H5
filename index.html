@@ -2098,7 +2098,7 @@ $('#findup').onclick=()=>doFind(true);$('#finddn').onclick=()=>doFind(false);$('
 function clearDataDialog(){
   dialog('清除浏览数据',`<label class="fld"><span>时间范围</span><select id="cr"><option value="3600000">过去一小时</option><option value="86400000">过去 24 小时</option><option value="604800000">过去 7 天</option><option value="2419200000">过去 4 周</option><option value="0" selected>时间不限</option></select></label>
   <label class="chk"><input type="checkbox" id="c1" checked> 浏览记录</label><label class="chk"><input type="checkbox" id="c2" checked> Cookie 及其他网站数据</label><label class="chk"><input type="checkbox" id="c3" checked> 缓存的图片和文件</label>`,
-  [{text:'取消'},{text:'清除数据',pri:true,fn:ov=>{const r=+$('#cr',ov).value;if($('#c1',ov).checked){HIST=r?HIST.filter(h=>Date.now()-h.time>r):[];saveH();onDataChange()}toast('已清除浏览数据')}}]);
+  [{text:'取消'},{text:'清除数据',pri:true,fn:ov=>{const r=+$('#cr',ov).value,c1=$('#c1',ov).checked;if(!c1&&!$('#c2',ov).checked&&!$('#c3',ov).checked){toast('请至少选择一项要清除的数据');return false}if(c1){HIST=r?HIST.filter(h=>Date.now()-h.time>r):[];saveH();onDataChange()}toast(c1?'已清除所选浏览数据':'已清除所选数据')}}]);
 }
 function newWindow(url){if(window.IWM)IWM.post('newwin',{url:url||null});else if(window.WM)WM.newWindow(false,url);else window.open(location.href.split('?')[0],'_blank')}
 function newIncognito(url){if(window.IWM){IWM.post('newwin',{inc:true,url:url||null});return}if(window.WM){WM.newWindow(true,url);return}const base=location.href.split('?')[0].split('#')[0];window.open(base+'?incognito=1'+(url?'&u='+encodeURIComponent(url):''),'_blank')}
