@@ -2398,7 +2398,7 @@ function dino(cv){
 }
 
 /* ============ 窗口管理 ============ */
-const win={max:true,min:false,open:true};
+const win={max:true,min:false,open:EMB};
 let RB=store.get('winb',null);
 const defB=()=>({x:Math.round(innerWidth*.08),y:Math.round(innerHeight*.04),w:Math.round(innerWidth*.84),h:Math.round((innerHeight-48)*.92)});
 function clampB(b){const W=innerWidth,H=innerHeight-48;b.w=Math.max(500,Math.min(b.w,W));b.h=Math.max(360,Math.min(b.h,H));b.x=Math.max(-b.w+140,Math.min(b.x,W-140));b.y=Math.max(0,Math.min(b.y,H-41));return b}
@@ -2941,6 +2941,7 @@ function statusBubble(t){
   },true);
   /* 鼠标侧键：后退 / 前进 */
   document.addEventListener('mouseup',e=>{
+    if(!win.open||win.min||document.body.classList.contains('locked'))return;
     if(e.button!==3&&e.button!==4)return;const t=cur();if(!t)return;
     e.preventDefault();e.button===3?goBack(t):goFwd(t);
   });
@@ -3367,10 +3368,11 @@ render();
 
   /* ---- 鼠标转发：拖动窗口 / 标签页时，指针被本框架捕获，需把事件转交给窗口管理器 ---- */
   function forward(){
-    const mv=ev=>post('dragmove',{sx:ev.screenX,sy:ev.screenY,b:ev.buttons});
+    const mv=ev=>{if(ev.buttons===0){off();post('dragend',{sx:ev.screenX,sy:ev.screenY});return}post('dragmove',{sx:ev.screenX,sy:ev.screenY,b:ev.buttons})};
     const up=ev=>{off();post('dragend',{sx:ev.screenX,sy:ev.screenY})};
-    const off=()=>{document.removeEventListener('mousemove',mv,true);document.removeEventListener('mouseup',up,true)};
-    document.addEventListener('mousemove',mv,true);document.addEventListener('mouseup',up,true);
+    const bl=()=>{off();post('dragend',{sx:0,sy:0,cancel:true})};
+    const off=()=>{document.removeEventListener('mousemove',mv,true);document.removeEventListener('mouseup',up,true);removeEventListener('blur',bl)};
+    document.addEventListener('mousemove',mv,true);document.addEventListener('mouseup',up,true);addEventListener('blur',bl);
   }
   $('#tabstrip').addEventListener('mousedown',e=>{
     if(e.button!==0||(e.target.id!=='tabstrip'&&e.target.id!=='spacer'))return;
@@ -3650,11 +3652,11 @@ render();
     const r=w.ifr.getBoundingClientRect(),px=r.left+m.cx,py=r.top+m.cy;
     D={w:w,kind:'move',merge:!!m.merge,started:false,ofx:px-m.sx,ofy:py-m.sy,px0:px,py0:py,ox:0,oy:0,hover:null};
     focusWin(w,true);
-    shieldOn();document.body.classList.add('wdrag');
     if(m.immediate)startMove(px,py);
   }
   function startMove(px,py){
     const w=D.w;D.started=true;
+    shieldOn();document.body.classList.add('wdrag');
     if(w.max||w.snap){
       const b=clone(w.rb||defB());
       b.x=Math.round(px-b.w*(px/innerWidth));b.y=Math.max(0,py-16);
@@ -3844,7 +3846,7 @@ render();
       case 'dragstart':beginDrag(w,m);break;
       case 'tabout':tabOut(w,m);break;
       case 'dragmove':if(D&&D.kind==='move')dragAt(m.sx+D.ofx,m.sy+D.ofy,m.b);break;
-      case 'dragend':if(D&&D.kind==='move')dragEnd(m.sx+D.ofx,m.sy+D.ofy);break;
+      case 'dragend':if(D&&D.kind==='move')dragEnd(m.cancel?D.w.b.x+D.ox:m.sx+D.ofx,m.cancel?D.w.b.y+D.oy:m.sy+D.ofy);break;
       case 'sbshow':showSB(w,m);break;
       case 'sbhide':clearTimeout(sbT);sbT=setTimeout(rmSB,250);break;
       case 'exported':{const f=reqs[m.req];if(f){delete reqs[m.req];f(m.tabs)}break}
@@ -3900,6 +3902,7 @@ render();
     if(e.target.id==='desktop'&&focus&&!ov){focus=null;pushAll()}
   },true);
   document.addEventListener('keydown',e=>{
+    if(document.body.classList.contains('locked')||$('#poff'))return;
     if(e.key==='Escape'&&ov){exitOv();return}
     const c=e.ctrlKey||e.metaKey,k=(e.key||'').toLowerCase(),fw=byId(focus);
     if(c&&!e.altKey&&!e.shiftKey&&k==='n'){e.preventDefault();WM.newWindow(false)}
