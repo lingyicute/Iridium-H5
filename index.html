@@ -421,7 +421,12 @@ body.fs #shelf{display:none}
 .lapp:hover{background:var(--shelf-hov)}
 /* 设置 */
 #osset{position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);width:min(880px,94vw);height:min(580px,78vh);z-index:2000;border-radius:12px;background:var(--osb);color:var(--osfg);box-shadow:0 0 0 1px rgba(0,0,0,.2),0 16px 48px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden;user-select:none;animation:wopen .18s cubic-bezier(.2,.8,.2,1)}
-#osset .osh{height:48px;display:flex;align-items:center;padding:0 8px 0 20px;font-size:15px;font-weight:500;flex:none}
+#osset.max{left:0!important;top:0!important;width:100%!important;height:calc(100% - 48px)!important;transform:none!important;border-radius:0;box-shadow:none}
+#osset.blur{box-shadow:0 0 0 1px rgba(0,0,0,.14),0 6px 22px rgba(0,0,0,.28)}
+body.ov #osset{opacity:0;pointer-events:none}
+#osset .osh{height:48px;display:flex;align-items:center;gap:2px;padding:0 8px 0 20px;font-size:15px;font-weight:500;flex:none}
+#osset .osh .qc{width:32px;height:32px;background:none}
+#osset .osh .qc:hover{background:var(--shelf-hov)}
 #osset .osm{flex:1;display:flex;min-height:0}
 #osset nav{width:230px;padding:6px 8px;flex:none}
 #osset nav a{display:flex;align-items:center;gap:14px;height:44px;padding:0 16px;border-radius:22px;font-size:14px;color:var(--osfg);text-decoration:none}
@@ -2674,10 +2679,14 @@ function powerOff(){
 /* 设置 */
 function openOsSettings(sec){
   if(EMB&&window.IWM){IWM.post('osset',{sec:sec||''});return}
-  const old=$('#osset');if(old)old.remove();
-  let sc=sec||'personal';
   const SEC=[['network','网络',P.wifi],['bt','蓝牙',P.bt],['personal','个性化',P.edit],['display','显示器',P.bright],['about','关于 IridiumOS',P.info]];
-  const w=el(`<div id="osset"><div class="osh"><span style="flex:1">设置</span><button class="qc" data-x="1" title="关闭" style="background:none">${svg(P.close,18)}</button></div><div class="osm"><nav></nav><main></main></div></div>`);
+  const valid=s=>SEC.some(x=>x[0]===s);
+  const old=$('#osset');
+  if(old){if(sec&&valid(sec))old._setSec(sec);old._focus();return}
+  let sc=valid(sec)?sec:'personal';
+  const icMax='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="8" height="8" rx="1.5"/></svg>';
+  const icRest='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><rect x="2" y="3.6" width="6.4" height="6.4" rx="1.3"/><path d="M4 3.6v-.4C4 2.4 4.6 1.8 5.4 1.8h3.4c.8 0 1.4.6 1.4 1.4v3.4c0 .8-.6 1.4-1.4 1.4h-.4"/></svg>';
+  const w=el(`<div id="osset"><div class="osh"><span style="flex:1">设置</span><button class="qc" data-min="1" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 8.5h8"/></svg></button><button class="qc" data-max="1" title="最大化">${icMax}</button><button class="qc" data-x="1" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.5 2.5l7 7m0-7l-7 7"/></svg></button></div><div class="osm"><nav></nav><main></main></div></div>`);
   const nav=$('nav',w),main=$('main',w);
   const sw=(k,v)=>`<label class="sw"><input type="checkbox" data-o="${k}" ${v?'checked':''}><span></span></label>`;
   const row=(a,b,c)=>`<div class="osrow"><div class="stx"><div class="st">${a}</div>${b?`<div class="sd">${b}</div>`:''}</div><div>${c||''}</div></div>`;
@@ -2694,25 +2703,44 @@ function openOsSettings(sec){
     else h=`<h2>关于 IridiumOS</h2><div class="oscard"><div class="osrow" style="padding:24px 20px;gap:18px">${IRI(56)}<div class="stx"><div class="st" style="font-size:20px">IridiumOS</div><div class="sd">Made with love by lingyicute</div></div></div>${row('版本','16093.57.0（正式版本）稳定版渠道（64 位）')}${row('浏览器',`Iridium ${VERSION}`)}${row('平台','x86_64 · iframe 模式')}${row('设备名称','IridiumBook')}</div>`;
     main.innerHTML=h;
   };
-  const close=()=>{w.remove();$('#sh-set').classList.remove('run','act')};
+  const focusSelf=()=>{
+    w._min=false;w.style.display='';w.style.zIndex=2000;w.classList.remove('blur');
+    $('#sh-set').classList.add('run','act');
+    if(window.WM&&WM.blurAll)WM.blurAll();
+    document.title='设置 - IridiumOS';
+  };
+  const minSelf=()=>{
+    w._min=true;w.style.display='none';w.classList.add('blur');
+    $('#sh-set').classList.remove('act');
+    if(window.WM&&WM.focusTop)WM.focusTop();
+  };
+  const toggleMax=()=>{
+    const on=!w.classList.toggle('max');
+    const b=$('[data-max]',w);b.innerHTML=on?icMax:icRest;b.title=on?'最大化':'向下还原';
+  };
+  const close=()=>{w.remove();$('#sh-set').classList.remove('run','act');if(window.WM&&WM.focusTop)WM.focusTop()};
+  w._setSec=s=>{sc=s;draw()};w._focus=focusSelf;w._minFn=minSelf;
   w.addEventListener('click',e=>{
     if(e.target.closest('[data-x]')){close();return}
+    if(e.target.closest('[data-min]')){minSelf();return}
+    if(e.target.closest('[data-max]')){toggleMax();return}
     const s=e.target.closest('[data-s]');if(s){sc=s.dataset.s;draw();return}
     const dk=e.target.closest('[data-dk]');if(dk){OS.dark=dk.dataset.dk==='auto'?null:dk.dataset.dk==='dark';saveOS();applyOS();applySettings();draw();return}
     const wp=e.target.closest('[data-w]');if(wp){OS.wall=+wp.dataset.w;saveOS();applyOS();draw()}
   });
   w.addEventListener('change',e=>{const k=e.target.dataset.o;if(!k)return;OS[k]=e.target.checked;saveOS();applyOS();draw()});
   w.addEventListener('input',e=>{if(e.target.dataset.r){OS.bright=+e.target.value;saveOS();applyOS()}});
+  $('.osh',w).ondblclick=e=>{if(!e.target.closest('button'))toggleMax()};
   $('.osh',w).onmousedown=e=>{
-    if(e.button!==0||e.target.closest('button'))return;
+    if(e.button!==0||e.target.closest('button')||w.classList.contains('max'))return;
     const r=w.getBoundingClientRect(),dx=e.clientX-r.left,dy=e.clientY-r.top;
     w.style.transform='none';w.style.left=r.left+'px';w.style.top=r.top+'px';shieldOn();
     const mm=ev=>{w.style.left=Math.max(-300,Math.min(innerWidth-100,ev.clientX-dx))+'px';w.style.top=Math.max(0,Math.min(innerHeight-100,ev.clientY-dy))+'px'};
     const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);shieldOff()};
     document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
   };
-  w.addEventListener('mousedown',()=>{w.style.zIndex=2000;$('#sh-set').classList.add('act')},true);
-  document.body.append(w);draw();$('#sh-set').classList.add('run','act');
+  w.addEventListener('mousedown',()=>{focusSelf()},true);
+  document.body.append(w);draw();focusSelf();
 }
 
 /* 全屏（沉浸模式：隐藏置物架，鼠标移到顶部显示工具栏） */
@@ -2762,7 +2790,7 @@ $('#launcher').onclick=toggleLauncher;
 $('#status').onclick=()=>toggleQS();
 $('#sh-iri').onclick=()=>{closeOS();if(!win.open)openWindow();else{win.min=!win.min;syncWin()}};
 $('#sh-files').onclick=()=>openApp('files');
-$('#sh-set').onclick=()=>{closeOS();const s=$('#osset'),b=$('#sh-set');if(s){if(b.classList.contains('act')){s.remove();b.classList.remove('run','act')}else{s.style.zIndex=2000;b.classList.add('act')}}else openOsSettings()};
+$('#sh-set').onclick=()=>{closeOS();const s=$('#osset'),b=$('#sh-set');if(!s){openOsSettings();return}if(!s._min&&b.classList.contains('act'))s._minFn();else s._focus()};
 const wallMenu=e=>{e.preventDefault();showMenu([{label:'设置壁纸和样式',icon:svg(P.edit,18),fn:()=>openOsSettings('personal')},{label:'显示器设置',icon:svg(P.bright,18),fn:()=>openOsSettings('display')},{label:'关于 IridiumOS',icon:svg(P.info,18),fn:()=>openOsSettings('about')}],e.clientX,e.clientY)};
 $('#desktop').addEventListener('contextmenu',wallMenu);
 $('#shelf').addEventListener('contextmenu',wallMenu);
@@ -3556,10 +3584,10 @@ render();
   function focusWin(w,noIframeFocus){
     if(!w)return;
     if(w.min){restore(w);return}
-    const os=$('#osset');if(os){os.style.zIndex=95;$('#sh-set').classList.remove('act')}
+    const os=$('#osset');if(os){os.style.zIndex=95;os.classList.add('blur');$('#sh-set').classList.remove('act')}
     raise(w);focus=w.id;pushAll();
     if(!noIframeFocus){try{w.ifr.contentWindow.focus()}catch(e){}}
-    document.title=(w.title||'Iridium')+' - Iridium';
+    document.title=(w.inc?'(无痕) ':'')+(w.title||'Iridium')+' - Iridium';
   }
   function minimize(w){
     if(w.min||w.closing||w._minning)return;
@@ -3762,7 +3790,8 @@ render();
     closeOS();closePopups();rmSB();
     const bd=el('<div id="ovl"></div>');document.body.append(bd);
     ov={bd:bd,labels:[]};bd.onclick=()=>exitOv();
-    wins.forEach(w=>{w.fr.classList.add('ov');w.fr.style.display=''});
+    document.body.classList.add('ov');pushAll();
+    wins.forEach(w=>{clearTimeout(w._ovt);w.fr.classList.remove('ovx');w.fr.classList.add('ov');w.fr.style.display=''});
     try{if(document.activeElement)document.activeElement.blur();window.focus()}catch(e){}
     ovLayout();
   }
@@ -3789,11 +3818,14 @@ render();
   function exitOv(sel){
     if(!ov)return;
     const o=ov;ov=null;o.labels.forEach(l=>l.remove());o.bd.remove();
+    document.body.classList.remove('ov');
     wins.forEach(w=>{
+      clearTimeout(w._ovt);
       w.fr.classList.remove('ov');w.fr.classList.add('ovx');w.fr.style.transform='';
-      setTimeout(()=>{w.fr.classList.remove('ovx');if(w.min)w.fr.style.display='none'},300);
+      w._ovt=setTimeout(()=>{w.fr.classList.remove('ovx');if(w.min)w.fr.style.display='none'},300);
     });
     if(sel){if(sel.min)restore(sel);else focusWin(sel)}
+    else pushAll();
   }
   const toggleOv=()=>ov?exitOv():enterOv();
 
@@ -3810,6 +3842,8 @@ render();
       if(w){focusWin(w);send(w,'openurl',{url:v})}else create({mode:'new',url:v,max:true});
     },
     newWindow(inc,url){create({mode:'new',inc:inc,url:url||null})},
+    blurAll(){if(focus){focus=null;pushAll()}if(document.activeElement&&document.activeElement.tagName==='IFRAME')try{document.activeElement.blur()}catch(e){}},
+    focusTop(){const n=order().find(x=>!x.min&&!x.closing);if(n)focusWin(n);else{const os=$('#osset');document.title=(os&&!os._min)?'设置 - IridiumOS':'Iridium'}},
     toggleOverview:toggleOv
   };
 
@@ -3822,7 +3856,7 @@ render();
         w.ready=true;
         send(w,'init',{mode:w.mode,tabs:w.pending,url:w.url,state:state(w)});
         w.pending=null;w.url=null;pushAll();broadcast();break;
-      case 'focus':if(focus!==w.id&&!ov)focusWin(w,true);break;
+      case 'focus':closeOS();closePopups();if(focus!==w.id&&!ov)focusWin(w,true);break;
       case 'meta':
         w.title=m.title||'新标签页';w.n=m.n||1;w.tabs=m.tabs||[];
         if(focus===w.id)document.title=w.title+' - Iridium';
@@ -3897,7 +3931,11 @@ render();
 
   /* ---------- 桌面级快捷键 / 点击桌面使窗口变为非活动 ---------- */
   document.addEventListener('mousedown',e=>{
-    if(e.target.id==='desktop'&&focus&&!ov){focus=null;pushAll()}
+    if(e.target.id==='desktop'&&!ov){
+      if(focus){focus=null;pushAll()}
+      const os=$('#osset');if(os){os.classList.add('blur');$('#sh-set').classList.remove('act')}
+      if(document.activeElement&&document.activeElement.tagName==='IFRAME')try{document.activeElement.blur()}catch(_){}
+    }
   },true);
   document.addEventListener('keydown',e=>{
     if(document.body.classList.contains('locked')||$('#poff'))return;
