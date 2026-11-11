@@ -372,3 +372,15 @@ test('minimizing a fullscreen window leaves host fullscreen and the window fulls
   assert.equal(await page.evaluate(() => WM.wins[0].fs), false);
   await page.waitForFunction(() => !document.fullscreenElement);
 });
+
+test('protocol-only omnibox input is searched instead of loading an empty URL', async t => {
+  const { frame } = await desktop(t);
+  const out = await frame.evaluate(() => {
+    const bad = ['https://', 'http://', 'ftp://', 'data:', 'javascript:', 'view-source:'].map(resolve);
+    const good = ['https://example.com/', 'file:///tmp/a.html', 'data:,hi', 'javascript:void(0)', 'view-source:chrome://version'].map(resolve);
+    return { bad, good, like: [looksLikeUrl('https://'), looksLikeUrl('data:'), looksLikeUrl('https://a.b')] };
+  });
+  for (const u of out.bad) assert.match(u, /^chrome-search:\/\/results\?q=/);
+  assert.deepEqual(out.good, ['https://example.com/', 'file:///tmp/a.html', 'data:,hi', 'javascript:void(0)', 'view-source:chrome://version']);
+  assert.deepEqual(out.like, [false, false, true]);
+});
