@@ -420,3 +420,13 @@ test('chrome://about uses the Iridium product name for its title and heading', a
   const out = await frame.evaluate(() => ({ title: activeTab.title, h1: activeTab.view.querySelector('h1').textContent }));
   assert.deepEqual(out, { title: 'Iridium 网址列表', h1: 'Iridium 网址列表' });
 });
+
+test('the All Bookmarks entry is hidden while Other Bookmarks is empty', async t => {
+  const { frame } = await desktop(t);
+  const state = () => frame.evaluate(() => ({ hidden: document.querySelector('#bmother').offsetParent === null, label: document.querySelector('#bmother').textContent }));
+  assert.equal((await state()).hidden, true);
+  await frame.evaluate(() => { BM.other.push({ id: uid(), type: 'url', title: '其他', url: 'https://example.com/' }); saveBM(); });
+  assert.deepEqual(await state(), { hidden: false, label: '所有书签' });
+  await frame.evaluate(() => { BM.other.length = 0; saveBM(); });
+  assert.equal((await state()).hidden, true);
+});
