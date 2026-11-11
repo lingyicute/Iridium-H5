@@ -413,3 +413,10 @@ test('downloads unfinished in a previous session are shown as interrupted, not c
   assert.equal(rows[3].err, false);
   assert.equal(await frame.evaluate(() => document.querySelector('#dlBtn').classList.contains('busy')), false);
 });
+
+test('chrome://about uses the Iridium product name for its title and heading', async t => {
+  const { frame } = await desktop(t);
+  await frame.evaluate(() => go(activeTab, 'chrome://about/'));
+  const out = await frame.evaluate(() => ({ title: activeTab.title, h1: activeTab.view.querySelector('h1').textContent }));
+  assert.deepEqual(out, { title: 'Iridium 网址列表', h1: 'Iridium 网址列表' });
+});
