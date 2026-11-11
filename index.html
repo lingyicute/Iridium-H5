@@ -2286,10 +2286,10 @@ function pageVersion(t){
   return root;
 }
 function pageAbout(t){
-  t.title='Chrome 网址列表';
+  t.title='Iridium 网址列表';
   const list=['about','bookmarks','credits','dino','downloads','extensions','flags','history','management','newtab','os-settings','password-manager','settings','version'];
   const dbg=['crash','kill','hang','shorthang','gpuclean','gpucrash','gpuhang','memory-exhaust','ppapiflashcrash'];
-  return el(`<div class="pg ver"><div class="vwrap"><h1 class="uh">Chrome 网址列表</h1><div class="ul">${list.map(x=>`<div><a data-url="chrome://${x}/">chrome://${x}</a></div>`).join('')}</div><h2 class="uh2">仅供调试使用</h2><p class="ud">以下网址仅用于调试目的。为避免误触，它们不会被直接打开。</p><div class="ul dbg">${dbg.map(x=>`<div>chrome://${x}</div>`).join('')}</div></div></div>`);
+  return el(`<div class="pg ver"><div class="vwrap"><h1 class="uh">Iridium 网址列表</h1><div class="ul">${list.map(x=>`<div><a data-url="chrome://${x}/">chrome://${x}</a></div>`).join('')}</div><h2 class="uh2">仅供调试使用</h2><p class="ud">以下网址仅用于调试目的。为避免误触，它们不会被直接打开。</p><div class="ul dbg">${dbg.map(x=>`<div>chrome://${x}</div>`).join('')}</div></div></div>`);
 }
 function pageCredits(t){
   t.title='开源许可';
