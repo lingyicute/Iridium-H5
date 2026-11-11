@@ -1612,15 +1612,7 @@ function tabCls(d){const w=d.offsetWidth;d.classList.toggle('c1',w<=108);d.class
 const tro=new ResizeObserver(es=>es.forEach(en=>tabCls(en.target)));
 const hcard=$('#hcard');let hcT=0,hcTab=null;
 function hideHC(){hcTab=null;clearTimeout(hcT);hcard.hidden=true;hcard.classList.remove('slide')}
-function showHC(te){
-  if(layer.firstChild||!te.isConnected||S.flags['tab-hover-cards']==='disabled')return;
-  const t=byId(te.dataset.id);if(!t)return;
-  const host=t.kind==='internal'?'Iridium 内部页面':(t.kind==='web'?hostOf(t.url):(t.url||''));
-  hcard.innerHTML=`<div class="hct">${esc(t.title)}</div><div class="hcu">${esc(host)}</div>`;
-  const wasOn=!hcard.hidden;hcard.classList.toggle('slide',wasOn);
-  hcard.hidden=false;const r=te.getBoundingClientRect();
-  hcard.style.left=Math.max(4,Math.min(r.left,innerWidth-hcard.offsetWidth-4))+'px';hcard.style.top=(r.bottom+4)+'px';
-}
+let showHC=null;/* 实际实现见后文“悬停卡片缩略图”与“内存用量”两处赋值 */
 tabsEl.addEventListener('mouseover',e=>{const te=e.target.closest('.tab');if(!te||te===hcTab||te.classList.contains('drag'))return;hcTab=te;clearTimeout(hcT);hcT=setTimeout(()=>showHC(te),hcard.hidden?500:50)});
 tabsEl.addEventListener('mouseleave',hideHC);
 tabsEl.addEventListener('mousedown',hideHC,true);
