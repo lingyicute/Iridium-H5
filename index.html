@@ -1205,6 +1205,8 @@ const IRI=(s=16)=>`<span class="iri" style="width:${s}px;height:${s}px"><img src
 function favErr(i){const w=i.width||16;i.replaceWith(el(`<span class="favg" style="width:${w}px;height:${w}px">${svg(P.globe,w)}</span>`))}
 function fav(url,s=16){
   if(!url||/^(chrome|chrome-search):/i.test(url))return IRI(s);
+  // 避免在模拟无痕窗口中将访问域名发送给第三方图标服务。
+  if(INC)return `<span class="favg" style="width:${s}px;height:${s}px">${svg(P.globe,s)}</span>`;
   try{const u=new URL(url);if(/^https?:$/.test(u.protocol))return `<img class="fav" width="${s}" height="${s}" src="https://www.google.com/s2/favicons?domain=${encodeURIComponent(u.hostname)}&sz=64" onerror="favErr(this)" alt="">`}catch(e){}
   return `<span class="favg" style="width:${s}px;height:${s}px">${svg(P.globe,s)}</span>`;
 }
@@ -1391,7 +1393,7 @@ function dialog(title,body,btns){
 let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200)}
 
 /* ============ 标签页 ============ */
-let tabs=[],activeTab=null,closedStack=[],tabFocusTimer=0;
+let tabs=[],activeTab=null,closedStack=[],tabFocusTimer=0,restoringSession=false;
 const tabsEl=$('#tabs'),content=$('#content');
 const cur=()=>activeTab;
 const byId=id=>tabs.find(t=>t.id===id);
@@ -1413,18 +1415,46 @@ function activate(t){
   if(t.group&&groups[t.group])groups[t.group].collapsed=false;
   tabs.forEach(fillTab);renderGroups();applyZoom(t);updateUI();$('#findbar').hidden=true;saveSession();
 }
-function pushClosed(t,i){clearTimeout(t._lt);if(t.el)try{tro.unobserve(t.el)}catch(e){}if(t.url&&!isNtpUrl(t.url)){closedStack.push({url:t.url,title:t.title||'',pinned:t.pinned,index:i});if(closedStack.length>25)closedStack.shift()}}
+/* 每个标签页最多保存 50 条导航记录（与 Chrome 一致），避免会话存储无限增长。 */
+function histWin(t){const off=Math.max(0,t.hist.length-50);return {hist:t.hist.slice(off).map(h=>({url:h.url,title:h.title||''})),idx:Math.max(0,t.idx-off)}}
+function tabSnapshot(t){
+  const g=t.group&&groups[t.group],h=histWin(t);
+  return {url:t.url,title:t.title||'',pinned:!!t.pinned,hist:h.hist,idx:h.idx,zoom:t.zoom,active:t===activeTab,
+    group:g?{id:g.id,name:g.name,color:g.color,collapsed:!!g.collapsed}:null};
+}
+function applyTabSnapshot(t,s){
+  if(Array.isArray(s.hist)){const h=s.hist.filter(x=>x&&typeof x.url==='string').slice(-50).map(x=>({url:x.url,title:typeof x.title==='string'?x.title:''}));if(h.length){const off=Math.max(0,s.hist.filter(x=>x&&typeof x.url==='string').length-h.length);t.hist=h;t.idx=Number.isInteger(s.idx)?Math.max(0,Math.min(s.idx-off,h.length-1)):h.length-1}}
+  const z=Number(s.zoom);if(Number.isFinite(z)&&z>=.25&&z<=5){t.zoom=z;applyZoom(t)}
+  if(s.title&&t.kind==='web')setTitle(t,s.title);
+}
+function pushClosed(t,i){
+  clearTimeout(t._lt);if(t.el)try{tro.unobserve(t.el)}catch(e){}
+  if(INC||!t.url)return;
+  const c=Object.assign(tabSnapshot(t),{index:i,closedId:uid()});closedStack.push(c);if(closedStack.length>25)closedStack.shift();
+  if(EMB&&window.IWM)IWM.post('closedtab',{tab:c});
+}
 function closeTab(t,fromMouse){
   const i=tabs.indexOf(t);if(i<0)return;
+  // 最后一个标签关闭的是整个窗口；保留快照供窗口管理器恢复。
+  if(tabs.length===1){if(!EMB)pushClosed(t,i);closeWindow();return}
   pushClosed(t,i);
-  if(tabs.length===1){tabs.forEach(x=>{clearTimeout(x._lt);x.view.remove()});tabs=[];activeTab=null;closeWindow();return}
   tabs.splice(i,1);t.view.remove();
   if(fromMouse&&t.el&&tabs.length)lockTabs(t.el);
   collapseTab(t.el);
   if(activeTab===t)activate(tabs[Math.min(i,tabs.length-1)]);
   renderTabs();saveSession();
 }
-function reopenClosed(){const c=closedStack.pop();if(!c)return;const pc=tabs.filter(x=>x.pinned).length;const idx=c.pinned?Math.min(c.index,pc):Math.max(pc,Math.min(c.index,tabs.length));newTab(c.url,{index:idx,pinned:c.pinned})}
+function restoreClosed(c){
+  if(!c)return;
+  const ci=closedStack.findIndex(x=>x.closedId===c.closedId);if(ci>=0)closedStack.splice(ci,1);
+  if(EMB&&window.IWM)IWM.post('forgetclosed',{id:c.closedId});
+  const pc=tabs.filter(x=>x.pinned).length,at=Number.isInteger(c.index)?c.index:tabs.length;
+  const idx=c.pinned?Math.min(at,pc):Math.max(pc,Math.min(at,tabs.length));
+  const t=newTab(c.url,{index:idx,pinned:c.pinned,bg:true});applyTabSnapshot(t,c);
+  if(c.group&&!t.pinned){const g=c.group;if(!groups[g.id])groups[g.id]={id:g.id,name:g.name,color:g.color,collapsed:false};t.group=g.id;moveAfterGroup(t,g.id)}
+  renderTabs();activate(t);saveSession();
+}
+function reopenClosed(){if(INC)return;if(EMB&&window.IWM){IWM.post('reopen');return}restoreClosed(closedStack[closedStack.length-1])}
 let noTabAnim=true;
 const reduceMotion=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
 function collapseTab(e){
@@ -1490,7 +1520,7 @@ function tabMenu(t,x,y){
     {label:'关闭',icon:ic(P.close),key:'Ctrl+W',fn:()=>closeTab(t)},
     {label:'关闭其他标签页',disabled:!tabs.some(o=>o!==t&&!o.pinned),fn:()=>{tabs.forEach((o,idx)=>{if(o!==t&&!o.pinned){pushClosed(o,idx);o.view.remove()}});tabs=tabs.filter(o=>o===t||o.pinned);activate(t);renderTabs();saveSession()}},
     {label:'关闭右侧标签页',disabled:i>=tabs.length-1,fn:()=>{tabs.slice(i+1).forEach((o,idx)=>{pushClosed(o,i+1+idx);o.view.remove()});tabs=tabs.slice(0,i+1);if(!tabs.includes(activeTab))activate(t);renderTabs();saveSession()}},
-    '-',{label:'重新打开已关闭的标签页',key:'Ctrl+Shift+T',disabled:!closedStack.length,fn:reopenClosed}
+    '-',{label:'重新打开已关闭的标签页或窗口',key:'Ctrl+Shift+T',disabled:INC||(!closedStack.length&&!(window.IWM&&IWM.canReopen)),fn:reopenClosed}
   ],x,y);
 }
 
@@ -1616,7 +1646,7 @@ let showHC=null;/* 实际实现见后文“悬停卡片缩略图”与“内存�
 tabsEl.addEventListener('mouseover',e=>{const te=e.target.closest('.tab');if(!te||te===hcTab||te.classList.contains('drag'))return;hcTab=te;clearTimeout(hcT);hcT=setTimeout(()=>showHC(te),hcard.hidden?500:50)});
 tabsEl.addEventListener('mouseleave',hideHC);
 tabsEl.addEventListener('mousedown',hideHC,true);
-function saveSession(){if(INC||!tabs.length)return;store.set(SK,tabs.map(t=>({url:t.url,pinned:t.pinned,active:t===activeTab,g:t.group||undefined})));store.set(GK,Object.fromEntries(Object.values(groups).map(g=>[g.id,{id:g.id,name:g.name,color:g.color,collapsed:!!g.collapsed}])))}
+function saveSession(){if(INC||restoringSession||!tabs.length)return;store.set(SK,tabs.map(t=>{const h=histWin(t);return {url:t.url,title:t.title,pinned:t.pinned,active:t===activeTab,g:t.group||undefined,hist:h.hist,idx:h.idx,zoom:t.zoom}}));store.set(GK,Object.fromEntries(Object.values(groups).map(g=>[g.id,{id:g.id,name:g.name,color:g.color,collapsed:!!g.collapsed}])))}
 
 /* ============ 导航 ============ */
 const BLOCKED=/(^|\.)(google\.[a-z.]+|youtube\.com|facebook\.com|instagram\.com|twitter\.com|x\.com|github\.com|linkedin\.com|reddit\.com|netflix\.com|amazon\.[a-z.]+|paypal\.com|tiktok\.com|discord\.com|twitch\.tv|pinterest\.com|whatsapp\.com|openai\.com|chatgpt\.com|apple\.com)$/i;
@@ -1680,7 +1710,7 @@ function goFwd(t){if(t.idx<t.hist.length-1){t.idx++;load(t,t.hist[t.idx].url)}}
 const ZSTEPS=[.25,.33,.5,.67,.75,.8,.9,1,1.1,1.25,1.5,1.75,2,2.5,3,4,5];
 const defZoom=()=>(+S.pageZoom||100)/100;
 function applyZoom(t){if(!t)return;t.view.style.zoom=t.zoom;t.view.style.width=t.view.style.height=(100/t.zoom)+'%'}
-function zoomStep(t,d,quiet){if(!t)return;let i=ZSTEPS.findIndex(z=>Math.abs(z-t.zoom)<.01);if(i<0)i=7;i=Math.max(0,Math.min(ZSTEPS.length-1,i+d));t.zoom=ZSTEPS[i];applyZoom(t);updateUI();if(!quiet)showZoomBubble()}
+function zoomStep(t,d,quiet){if(!t)return;let i=ZSTEPS.findIndex(z=>Math.abs(z-t.zoom)<.01);if(i<0)i=7;i=Math.max(0,Math.min(ZSTEPS.length-1,i+d));t.zoom=ZSTEPS[i];applyZoom(t);updateUI();saveSession();if(!quiet)showZoomBubble()}
 function openReal(url){window.open(url,'_blank','noopener')}
 
 /* ============ UI 更新 ============ */
@@ -2012,7 +2042,7 @@ function mainMenu(){
     {label:'新建窗口',icon:ic(P.win),key:'Ctrl+N',fn:()=>newWindow()},
     {label:'新建无痕窗口',icon:ic(P.inc),key:'Ctrl+Shift+N',fn:()=>newIncognito()},'-',
     {label:'密码和自动填充',icon:ic(P.keyp),sub:[{label:'密码管理工具',fn:()=>openInternal('chrome://password-manager/')},{label:'付款方式',fn:soon('付款方式')},{label:'地址和其他信息',fn:soon('地址')}]},
-    {label:'历史记录',icon:ic(P.history),sub:()=>[{label:'历史记录',key:'Ctrl+H',fn:()=>openInternal('chrome://history/')},'-',{label:'最近关闭',disabled:true},...closedStack.slice(-4).reverse().map((c,i)=>({label:c.title||c.url,icon:fav(c.url,16),fn:()=>{closedStack.splice(closedStack.length-1-i,1);newTab(c.url,{pinned:c.pinned})}})),'-',...recent]},
+    {label:'历史记录',icon:ic(P.history),sub:()=>[{label:'历史记录',key:'Ctrl+H',fn:()=>openInternal('chrome://history/')},'-',{label:'最近关闭',disabled:true},...closedStack.slice(-4).reverse().map(c=>({label:c.title||c.url,icon:fav(c.url,16),fn:()=>restoreClosed(c)})),'-',...recent]},
     {label:'下载内容',icon:ic(P.dl),key:'Ctrl+J',fn:()=>openInternal('chrome://downloads/')},
     {label:'书签和列表',icon:ic(P.star),sub:()=>[{label:'为此标签页添加书签…',key:'Ctrl+D',disabled:!canBookmark(t),fn:()=>bookmarkBubble(cur())},{label:'显示书签栏',checked:S.showBm,key:'Ctrl+Shift+B',fn:()=>{S.showBm=!S.showBm;saveS();applySettings()}},{label:'书签管理器',key:'Ctrl+Shift+O',fn:()=>openInternal('chrome://bookmarks/')},'-',...bmMenuItems(BM.bar),...(BM.other.length?['-',{label:'其他书签',icon:svg(P.folder,16),sub:()=>bmMenuItems(BM.other)}]:[])]},
     {label:'标签页组',icon:ic('M5 4h14c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm0 6v8h14v-8H5zM5 6v2h5V6H5z'),sub:()=>[{label:'新建标签页组',icon:ic(P.add),fn:()=>newGroup(cur())},...(Object.keys(groups).length?['-',...Object.values(groups).map(g=>({label:g.name||'未命名群组',icon:`<span class="gdot" style="background:${GCOL[g.color]};margin:4px"></span>`,fn:()=>{const m=groupMembers(g.id);if(g.collapsed)toggleGroup(g);if(m[0])activate(m[0])}}))]:[])]},
@@ -2036,7 +2066,7 @@ toggler($('#extBtn'),'ext',()=>{
   showBubble(b,$('#extBtn'),'ext');b.style.padding='0';b.style.width='320px';$('#ex1',b).onclick=()=>{closePopups();openInternal('chrome://extensions/')};
 });
 toggler($('#profile'),'prof',()=>{
-  const b=el(`<div class="prof"><div style="display:flex;justify-content:center;margin:4px 0 10px">${INC?svg(P.inc,56):`<span class="avatar" style="width:64px;height:64px">${svg(P.person,44)}</span>`}</div><h3 style="margin:0">${INC?'无痕模式':'User'}</h3><div style="color:var(--text2);margin:4px 0 14px">${INC?'您的浏览活动不会被保存':'未登录'}</div>${INC?'':'<button class="btn pri" id="pf0" style="margin-bottom:10px">开启同步…</button>'}<div class="ms"></div><div class="bmi" id="pf1" style="text-align:left"><span class="ic">${svg(P.gear,20)}</span><span class="lb">管理 Iridium 用户</span></div><div class="bmi" id="pf2" style="text-align:left"><span class="ic">${svg(P.inc,20)}</span><span class="lb">无痕模式</span></div></div>`);
+  const b=el(`<div class="prof"><div style="display:flex;justify-content:center;margin:4px 0 10px">${INC?svg(P.inc,56):`<span class="avatar" style="width:64px;height:64px">${svg(P.person,44)}</span>`}</div><h3 style="margin:0">${INC?'无痕模式':'User'}</h3><div style="color:var(--text2);margin:4px 0 14px">${INC?'模拟无痕：宿主浏览器仍可能保存活动':'未登录'}</div>${INC?'':'<button class="btn pri" id="pf0" style="margin-bottom:10px">开启同步…</button>'}<div class="ms"></div><div class="bmi" id="pf1" style="text-align:left"><span class="ic">${svg(P.gear,20)}</span><span class="lb">管理 Iridium 用户</span></div><div class="bmi" id="pf2" style="text-align:left"><span class="ic">${svg(P.inc,20)}</span><span class="lb">无痕模式</span></div></div>`);
   showBubble(b,$('#profile'),'prof');b.style.width='320px';
   const z=$('#pf0',b);if(z)z.onclick=()=>{closePopups();toast('同步功能暂不可用')};
   $('#pf1',b).onclick=()=>{closePopups();openInternal('chrome://settings/')};$('#pf2',b).onclick=()=>{closePopups();newIncognito()};
@@ -2057,7 +2087,7 @@ toggler($('#siteinfo'),'site',()=>{
   showBubble(b,$('#siteinfo'),'site',false);b.style.padding='0';b.style.width='340px';
   $('#pix',b).onclick=()=>closePopups();b.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('bmi')){e.preventDefault();e.target.click()}});
   const lr=$('#pilearn',b);if(lr)lr.onclick=e=>{e.preventDefault();closePopups();newTab('https://support.google.com/chrome?p=ui_security_indicator',{afterActive:true})};
-  const s0=$('#si0',b);if(s0)s0.onclick=()=>{closePopups();toast('您与此网站之间发送的信息不会被他人看到（仅示意）')};
+  const s0=$('#si0',b);if(s0)s0.onclick=()=>{closePopups();toast('此地址使用 HTTPS；演示无法验证实际连接状态')};
   const s1=$('#si1',b),s2=$('#si2',b);if(s1)s1.onclick=s2.onclick=()=>{closePopups();openInternal('chrome://settings/privacy')};
 });
 toggler($('#tabsearch'),'ts',()=>{
@@ -2075,7 +2105,7 @@ toggler($('#tabsearch'),'ts',()=>{
     if(!keep)sel=q?(n?0:-1):-1;else sel=Math.min(sel,n-1);mark(false)};
   const rows=()=>$$('.tsr',b);
   const mark=(scroll)=>{rows().forEach((r,i)=>r.classList.toggle('sel',i===sel));const r=rows()[sel];if(r&&scroll)r.scrollIntoView({block:'nearest'})};
-  const choose=r=>{if(!r)return;if(r.dataset.t){const t=byId(r.dataset.t);closePopups();t&&activate(t)}else if(r.dataset.c){const ci=+r.dataset.ci,c=ci>=0?closedStack.splice(ci,1)[0]:null;closePopups();newTab(r.dataset.c,{pinned:c&&c.pinned})}};
+  const choose=r=>{if(!r)return;if(r.dataset.t){const t=byId(r.dataset.t);closePopups();t&&activate(t)}else if(r.dataset.c){const ci=+r.dataset.ci,c=ci>=0?closedStack[ci]:null;closePopups();restoreClosed(c)}};
   draw();$('#tsq',b).oninput=()=>draw();$('#tsq',b).focus();
   const cr=$('.tsr.cur',b);cr&&cr.scrollIntoView({block:'center'});
   b.addEventListener('keydown',e=>{const n=rows().length;
@@ -2169,7 +2199,7 @@ const fmtTime=ts=>new Date(ts).toLocaleTimeString('zh-CN',{hour:'numeric',minute
 function pageNTP(t){
   t.title='新标签页';
   if(INC){
-    return el(`<div class="pg ntp"><div class="incbox">${svg(P.inc,72)}<h1>您已进入无痕模式</h1><p><b>仅为界面模拟：</b>本应用不保存此窗口的模拟历史记录和会话，但无法创建真正的无痕浏览上下文，不能保证隔离宿主浏览器的 Cookie、网站存储或网络活动。敏感浏览请使用宿主浏览器的无痕窗口。</p><p>现在，其他使用此设备的用户将看不到您的活动记录，因此您可以更放心地进行私密浏览。此模式不会改变数据被网站及其所用的互联网服务提供商或雇主收集的方式。</p><p><b>Iridium 不会保存：</b></p><ul style="margin:0 0 0 20px;list-style:disc"><li>您的浏览记录</li><li>模拟标签页会话</li></ul><p><b>您的活动仍可能对以下各方可见：</b></p><ul style="margin:0 0 0 20px;list-style:disc"><li>您访问的网站</li><li>您的雇主或学校</li><li>您的互联网服务提供商</li></ul></div></div>`);
+    return el(`<div class="pg ntp"><div class="incbox">${svg(P.inc,72)}<h1>模拟无痕模式</h1><p><b>这只是界面演示，不是真正的无痕浏览。</b>页面运行在宿主浏览器中，无法隔离或清除其 Cookie、缓存、网站数据和表单信息，也无法保证其他用户看不到您的活动。</p><p>Iridium 不会在本地保存此窗口的模拟浏览记录、下载记录或会话。书签和下载的文件仍可能保留；宿主浏览器也可能保存活动。</p><p>如需私密浏览，请关闭此窗口并使用宿主浏览器真正的无痕窗口。您访问的网站、雇主或学校以及互联网服务提供商仍可能看到您的活动。</p></div></div>`);
   }
   const dk=/#(2b2d42|0f2027)/.test(S.ntpBg);
   const root=el(`<div class="pg ntp${dk?' dk':''}"><div class="ntpc"><div class="ntplogo">${IRI(64)}<span>Iridium</span></div><div class="ntpsearch">${I.search}<input placeholder="在 Iridium 中搜索，或者输入网址" spellcheck="false"><span class="mic" title="语音搜索">${svg(P.mic,22)}</span><span class="mic lens" title="按图搜索">${svg('M4 4h5v2H6v3H4V4zm11 0h5v5h-2V6h-3V4zM4 15h2v3h3v2H4v-5zm14 0h2v3h-3v2h-5v-2h3v-3zM12 8.2a3.8 3.8 0 100 7.6 3.8 3.8 0 000-7.6zm0 2a1.8 1.8 0 110 3.6 1.8 1.8 0 010-3.6z',22)}</span></div><div class="tiles"${S.showTiles===false?' hidden':''}></div></div><button class="cust">${svg(P.edit,16)}自定义 Iridium</button></div>`);
@@ -2497,14 +2527,14 @@ $('#wmin').onclick=()=>{if(EMB){IWM.post('min');return}
 $('#wmax').onclick=()=>{if(EMB){IWM.post('togglemax');return}win.max=!win.max;syncWin()};
 $('#wclose').onclick=()=>{if(EMB){IWM.post('close');return}const w=$('#win');w.classList.add('wclosing');setTimeout(()=>{closeWindow();w.classList.remove('wclosing')},reduceMotion()?0:150)};
 function closeWindow(){
-  if(EMB){tabs.forEach(t=>t.view.remove());tabs=[];tabsEl.innerHTML='';activeTab=null;closePopups();hideSugg();hideHC();IWM.post('close');return}
+  if(EMB){closePopups();hideSugg();hideHC();IWM.post('close',{tabs:tabs.map(IWM.exportTab)});return}
   tabs.forEach(t=>t.view.remove());tabs=[];tabsEl.innerHTML='';activeTab=null;win.open=false;closePopups();hideSugg();hideHC();syncWin();
 }
 function openWindow(){
   if(win.open){win.min=false;syncWin();return}
   win.open=true;win.min=false;win.max=true;syncWin();restoreStart();
 }
-function restoreStart(mode,url){noTabAnim=true;try{restoreStart0(mode,url)}finally{noTabAnim=false}}
+function restoreStart(mode,url){noTabAnim=true;restoringSession=true;try{restoreStart0(mode,url)}finally{restoringSession=false;noTabAnim=false;saveSession()}}
 function restoreStart0(mode,url){
   tabs.forEach(t=>t.view.remove());tabs=[];tabsEl.innerHTML='';
   const p=new URLSearchParams(location.search);
@@ -2515,8 +2545,8 @@ function restoreStart0(mode,url){
   if(!INC&&S.startup==='continue'&&ses.length){
     const rawGroups=store.get(GK,{}),sg=isRecord(rawGroups)?rawGroups:{};
     const nt=ses.map(s=>newTab(s.url,{pinned:!!s.pinned,bg:true}));
-    nt.forEach((t,i)=>{const gid=ses[i].g,g=sg[gid];if(!t.pinned&&typeof gid==='string'&&isRecord(g)){if(!groups[gid])groups[gid]={id:gid,name:typeof g.name==='string'?g.name:'',color:Object.hasOwn(GCOL,g.color)?g.color:'grey',collapsed:!!g.collapsed};t.group=gid}});
-    renderTabs();activate(nt[ses.findIndex(s=>s.active===true)]||nt[0]);saveSession();return;
+    nt.forEach((t,i)=>{const s=ses[i],gid=s.g,g=sg[gid];applyTabSnapshot(t,s);if(!t.pinned&&typeof gid==='string'&&isRecord(g)){if(!groups[gid])groups[gid]={id:gid,name:typeof g.name==='string'?g.name:'',color:Object.hasOwn(GCOL,g.color)?g.color:'grey',collapsed:!!g.collapsed};t.group=gid}});
+    renderTabs();activate(nt[ses.findIndex(s=>s.active===true)]||nt[0]);return;
   }
   if(!INC&&S.startup==='url'&&S.startupUrl){newTab(S.startupUrl);return}
   newTab();
@@ -2564,7 +2594,7 @@ $$('.rz').forEach(h=>h.addEventListener('mousedown',e=>{
   const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);shieldOff();RB=clampB(Object.assign({},RB));store.set('winb',RB);layoutBm()};
   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
 }));
-if(INC){const ic=$('#incchip');ic.hidden=false;ic.innerHTML=svg(P.inc,18)+'无痕模式'}
+if(INC){const ic=$('#incchip');ic.hidden=false;ic.title='这只是界面演示，不是真正的无痕浏览；宿主浏览器可能保留网站数据';ic.setAttribute('aria-label','无痕模式（模拟）：'+ic.title);ic.innerHTML=svg(P.inc,18)+'无痕模式'}
 
 /* ============ 快捷键 ============ */
 document.addEventListener('keydown',e=>{
@@ -2596,7 +2626,7 @@ document.addEventListener('keydown',e=>{
   else if(c&&!e.shiftKey&&k==='f'){stop();openFind()}
   else if(c&&(k==='+'||k==='=')){stop();zoomStep(t,1)}
   else if(c&&k==='-'){stop();zoomStep(t,-1)}
-  else if(c&&k==='0'){stop();t.zoom=defZoom();applyZoom(t);updateUI()}
+  else if(c&&k==='0'){stop();t.zoom=defZoom();applyZoom(t);updateUI();saveSession()}
   else if(c&&e.key==='Tab'){stop();const i=tabs.indexOf(t),n=tabs.length;activate(tabs[(i+(e.shiftKey?-1:1)+n)%n])}
   else if(c&&/^[1-9]$/.test(e.key)){stop();const n=+e.key,tg=n===9?tabs[tabs.length-1]:tabs[n-1];if(tg)activate(tg)}
   else if(e.altKey&&!c&&e.key==='ArrowLeft'){stop();goBack(t)}
@@ -3439,7 +3469,7 @@ render();
 (function(){
   if(!EMB)return;
   const post=(t,o)=>{try{parent.postMessage(Object.assign({iri:1,wid:WID,t:t},o||{}),MSG_ORIGIN)}catch(e){}};
-  const IWM=window.IWM={post,wins:[],tabMenuItems,tryDetach,snapBubble,exportTab,adoptTab};
+  const IWM=window.IWM={post,wins:[],canReopen:false,tabMenuItems,tryDetach,snapBubble,exportTab,adoptTab};
 
   /* ---- 向窗口管理器同步标题 / 标签页数量 ---- */
   let metaT=0;
@@ -3448,16 +3478,10 @@ render();
   const _rt=renderTabs;renderTabs=function(){const r=_rt.apply(this,arguments);meta();return r};
 
   /* ---- 标签页导出 / 导入 (跨窗口移动标签页) ---- */
-  function exportTab(t){
-    const g=t.group&&groups[t.group];
-    return {url:t.url,title:t.title,pinned:!!t.pinned,hist:t.hist.map(h=>({url:h.url,title:h.title||''})),idx:t.idx,zoom:t.zoom,active:t===activeTab,
-      group:g?{id:g.id,name:g.name,color:g.color}:null};
-  }
+  function exportTab(t){return tabSnapshot(t)}
   function adoptTab(p,index){
     const t=newTab(p.url||'chrome://newtab/',{index:index==null?null:index,bg:true,pinned:p.pinned});
-    if(p.hist&&p.hist.length){t.hist=p.hist.map(h=>({url:h.url,title:h.title||''}));t.idx=Math.max(0,Math.min(p.idx,t.hist.length-1))}
-    if(p.zoom&&Math.abs(p.zoom-t.zoom)>.001){t.zoom=p.zoom;applyZoom(t)}
-    if(p.title&&t.kind==='web')setTitle(t,p.title);
+    applyTabSnapshot(t,p);
     if(p.group){if(!groups[p.group.id])groups[p.group.id]={id:p.group.id,name:p.group.name,color:p.group.color,collapsed:false};t.group=p.group.id}
     return t;
   }
@@ -3548,9 +3572,11 @@ render();
         else restoreStart(m.mode,m.url);
         break;
       case 'state':applyState(m);break;
-      case 'wins':IWM.wins=m.wins||[];break;
+      case 'wins':IWM.wins=m.wins||[];IWM.canReopen=!!m.canReopen;break;
       case 'export':post('exported',{req:m.req,tabs:tabs.map(exportTab)});break;
       case 'adopt':removeDrop();adoptAll(m.tabs,m.x);break;
+      case 'forgetclosed':{const i=closedStack.findIndex(c=>c.closedId===m.id);if(i>=0)closedStack.splice(i,1);break}
+      case 'restoretab':restoreClosed(m.tab);break;
       case 'dropHover':showDrop(m.x);break;
       case 'dropLeave':removeDrop();break;
       case 'openurl':newTab(m.url,{afterActive:true});break;
@@ -3578,7 +3604,9 @@ render();
 (function(){
   if(EMB)return;
   const BASE=location.href.split('#')[0].split('?')[0];
-  const wins=[],reqs={};
+  const wins=[],reqs={},recent=[];
+  function remember(item){recent.push(item);if(recent.length>25)recent.shift();broadcast()}
+  function forgetClosed(id){const i=recent.findIndex(x=>x.kind==='tab'&&x.tab.closedId===id);if(i>=0){recent.splice(i,1);broadcast()}}
   let zc=0,focus=null,D=null,ov=null,sbT=0,seq=0,bcT=0;
   const byId=id=>wins.find(w=>w.id===id);
   const H=()=>innerHeight-48;
@@ -3625,16 +3653,16 @@ render();
     send(w,'state',state(w));
   }
   function pushAll(){wins.forEach(push);const fw=byId(focus);document.body.classList.toggle('wfs',!!(fw&&fw.fs&&!fw.min&&!ov));if(!wins.some(w=>!w.min&&!w.closing)){const os=$('#osset');document.title=(os&&!os._min)?'设置 - IridiumOS':'Iridium'}window.updateShelf()}
-  function saveWins(){store.set('wins',wins.filter(w=>!w.inc&&!w.closing).map(w=>({id:w.id,b:w.b,max:w.max,rb:w.rb})))}
+  function saveWins(){store.set('wins',wins.filter(w=>!w.inc&&!w.closing).map(w=>({id:w.id,b:w.b,max:w.max,rb:w.rb,snap:w.snap})))}
   function broadcast(){
     clearTimeout(bcT);
-    bcT=setTimeout(()=>{const list=wins.map(w=>({id:w.id,title:w.title,inc:w.inc,n:w.n}));wins.forEach(w=>send(w,'wins',{wins:list}))},60);
+    bcT=setTimeout(()=>{const list=wins.map(w=>({id:w.id,title:w.title,inc:w.inc,n:w.n}));wins.forEach(w=>send(w,'wins',{wins:list,canReopen:!w.inc&&recent.length>0}))},60);
   }
 
   /* ---------- 创建 / 关闭 ---------- */
   function create(o){
     o=o||{};
-    const w={id:o.id||uid(),inc:!!o.inc,max:false,min:false,fs:false,snap:null,ready:false,pending:o.tabs||null,url:o.url||null,mode:o.mode||'new',
+    const w={id:o.id||uid(),inc:!!o.inc,max:false,min:false,fs:false,snap:o.snap==='l'||o.snap==='r'?o.snap:null,ready:false,pending:o.tabs||null,url:o.url||null,mode:o.mode||'new',
       title:'新标签页',n:1,tabs:[],z:0,b:null,rb:validBounds(o.rb)?clone(o.rb):null,seq:++seq};
     const base=byId(focus)||order()[0];
     if(o.b){w.b=clampB(clone(o.b));w.max=!!o.max}
@@ -3643,6 +3671,7 @@ render();
       else{const b=clone(base.b);b.x+=32;b.y+=32;if(b.x+b.w>innerWidth-20||b.y+b.h>H())b.x=40,b.y=24;w.b=clampB(b)}
     }else{w.max=o.max!==false;w.b=defB()}
     if(!w.rb)w.rb=clone(w.b);
+    if(w.snap){const h=Math.floor(innerWidth/2);w.b={x:w.snap==='l'?0:h,y:0,w:w.snap==='l'?h:innerWidth-h,h:H()};w.max=false}
     const fr=el('<div class="wframe"><iframe title="" allow="fullscreen; clipboard-read; clipboard-write; geolocation; microphone; camera; autoplay; encrypted-media; picture-in-picture"></iframe><div class="wcover"></div>'+
       ['n','s','e','w','ne','nw','se','sw'].map(d=>'<i class="wrz" data-d="'+d+'"></i>').join('')+'</div>');
     w.fr=fr;w.ifr=fr.firstElementChild;
@@ -3660,14 +3689,23 @@ render();
     if(ov)ovLayout();
     return w;
   }
-  function closeWin(w,merged){
+  function closeWin(w,merged,snapshot){
     if(w.closing)return;w.closing=true;
+    let saved=null;
+    if(!merged&&!w.inc){
+      const entry={kind:'window',tabs:null,b:clone(w.b),rb:clone(w.rb||w.b),max:w.max,snap:w.snap};
+      remember(entry);
+      entry.ready=(Array.isArray(snapshot)&&snapshot.length?Promise.resolve(snapshot):exportTabs(w)).then(list=>{
+        entry.tabs=list;if(!list||!list.length){const i=recent.indexOf(entry);if(i>=0){recent.splice(i,1);broadcast()}}
+      });
+      saved=entry.ready;
+    }
     const fin=()=>{
       const i=wins.indexOf(w);if(i>=0)wins.splice(i,1);
       w.fr.remove();
       if(!w.inc){
         if(merged||wins.some(x=>!x.inc)){try{localStorage.removeItem('iridium.session.'+w.id);localStorage.removeItem('iridium.groups.'+w.id)}catch(e){}}
-        else store.set('lastwin',{id:w.id,b:w.b,max:w.max,rb:w.rb});
+        else store.set('lastwin',{id:w.id,b:w.b,max:w.max,rb:w.rb,snap:w.snap});
       }
       if(!wins.some(x=>x.fs)&&document.fullscreenElement){try{document.exitFullscreen().catch(()=>{})}catch(e){}}
       if(focus===w.id){focus=null;const n=merged?null:order().find(x=>!x.min);if(n)focusWin(n);else pushAll()}else pushAll();
@@ -3675,12 +3713,14 @@ render();
       if(ov)ovLayout();
       if(D&&D.w===w)D=null;
     };
-    if(merged||reduce()){fin();return}
-    w.fr.classList.add('wclosing');setTimeout(fin,150);
+    if(merged){fin();return}
+    const finish=()=>saved?saved.then(fin,fin):fin();
+    if(reduce()){finish();return}
+    w.fr.classList.add('wclosing');setTimeout(finish,150);
   }
   function openApp0(){
     const lw=store.get('lastwin',null);
-    if(S.startup==='continue'&&savedWindow(lw)&&!byId(lw.id)){store.set('lastwin',null);return create({id:lw.id,b:lw.b,max:lw.max,rb:lw.rb,mode:'startup'})}
+    if(S.startup==='continue'&&savedWindow(lw)&&!byId(lw.id)){store.set('lastwin',null);return create({id:lw.id,b:lw.b,max:lw.max,rb:lw.rb,snap:lw.snap,mode:'startup'})}
     return create({mode:'startup',max:true});
   }
 
@@ -3957,6 +3997,20 @@ render();
   }
   const toggleOv=()=>ov?exitOv():enterOv();
 
+  /* 最近关闭仅保存在当前桌面内存中，且绝不记录无痕窗口。 */
+  function reopen(w){
+    if(w&&w.inc)return;
+    const item=recent.pop();if(!item)return;broadcast();
+    if(item.kind==='tab'){
+      const src=byId(item.wid);if(src&&!src.closing)send(src,'forgetclosed',{id:item.tab.closedId});
+      const target=src&&!src.closing?src:(w&&!w.closing?w:null);
+      if(target){send(target,'restoretab',{tab:item.tab});focusWin(target)}
+      else create({mode:'new',tabs:[Object.assign({},item.tab,{active:true})]});
+      return;
+    }
+    Promise.resolve(item.ready).then(()=>{if(item.tabs&&item.tabs.length)create({mode:'new',tabs:item.tabs,b:item.b,rb:item.rb,max:item.max,snap:item.snap})});
+  }
+
   /* ---------- 对外接口 ---------- */
   const WM=window.WM={
     wins:wins,create:create,
@@ -3972,7 +4026,7 @@ render();
     newWindow(inc,url){create({mode:'new',inc:inc,url:url||null})},
     blurAll(){if(focus){focus=null;pushAll()}if(document.activeElement&&document.activeElement.tagName==='IFRAME')try{document.activeElement.blur()}catch(e){}},
     focusTop(){const n=order().find(x=>!x.min&&!x.closing);if(n)focusWin(n);else{const os=$('#osset');document.title=(os&&!os._min)?'设置 - IridiumOS':'Iridium'}},
-    toggleOverview:toggleOv
+    toggleOverview:toggleOv,reopen:()=>reopen(byId(focus))
   };
 
   /* ---------- 来自各窗口的消息 ---------- */
@@ -3992,7 +4046,10 @@ render();
         broadcast();if(ov)ovLayout();break;
       case 'min':minimize(w);break;
       case 'togglemax':rmSB();focusWin(w,true);setMax(w,!w.max);break;
-      case 'close':closeWin(w);break;
+      case 'close':closeWin(w,false,m.tabs);break;
+      case 'closedtab':if(!w.inc&&m.tab&&m.tab.closedId)remember({kind:'tab',wid:w.id,tab:m.tab});break;
+      case 'forgetclosed':if(!w.inc)forgetClosed(m.id);break;
+      case 'reopen':reopen(w);break;
       case 'snapl':snap(w,'l');break;
       case 'snapr':snap(w,'r');break;
       case 'cycle':cycle();break;
@@ -4075,6 +4132,7 @@ render();
     const c=e.ctrlKey,k=(e.key||'').toLowerCase(),fw=byId(focus);
     if(c&&!e.altKey&&!e.shiftKey&&k==='n'){e.preventDefault();WM.newWindow(false)}
     else if(c&&!e.altKey&&e.shiftKey&&k==='n'){e.preventDefault();WM.newWindow(true)}
+    else if(c&&!e.altKey&&e.shiftKey&&k==='t'){e.preventDefault();reopen(fw)}
     else if(c&&e.altKey&&e.code==='KeyW'){e.preventDefault();toggleOv()}
     else if(fw&&!ov&&e.key==='F11'){e.preventDefault();setFs(fw,!fw.fs)}
     else if(e.altKey&&!c&&e.shiftKey&&e.code==='Backquote'){e.preventDefault();cycle(true)}
@@ -4106,7 +4164,7 @@ render();
       let list=Array.isArray(saved)?saved.filter((w,i,a)=>savedWindow(w)&&a.findIndex(x=>isRecord(x)&&x.id===w.id)===i):[];
       if(!list.length){const lw=store.get('lastwin',null);if(savedWindow(lw)){list=[lw];store.set('lastwin',null)}}
       clean(new Set(list.map(x=>x.id)));
-      if(list.length){list.forEach(o=>create({id:o.id,b:o.b,max:o.max,rb:o.rb,mode:'startup',noFocus:true}));focusWin(wins[wins.length-1],true)}
+      if(list.length){list.forEach(o=>create({id:o.id,b:o.b,max:o.max,rb:o.rb,snap:o.snap,mode:'startup',noFocus:true}));focusWin(wins[wins.length-1],true)}
       else create({mode:'startup',max:true});
     }else{
       clean(new Set());

@@ -498,3 +498,196 @@ test('the main menu disables Add bookmark on the new tab and error pages', async
   await frame.evaluate(() => go(activeTab, 'chrome://newtab/'));
   assert.equal(await item(), true);
 });
+
+/* ---- 最近关闭的标签页/窗口、会话历史与分屏恢复 ---- */
+async function windowFrame(page, index) {
+  await page.waitForFunction(i => window.WM && WM.wins[i] && WM.wins[i].ready, index);
+  const id = await page.evaluate(i => WM.wins[i].id, index);
+  let frame;
+  for (let i = 0; i < 150; i++) {
+    frame = page.frames().find(f => f.url().includes('wid=' + encodeURIComponent(id)));
+    if (frame && await frame.evaluate(() => typeof tabs !== 'undefined' && tabs.length > 0).catch(() => false)) break;
+    await page.waitForTimeout(20);
+  }
+  assert.ok(frame, 'embedded window should exist');
+  return frame;
+}
+
+test('closed tabs restore history, position, zoom, groups, and new tabs', async t => {
+  const { frame } = await desktop(t);
+  await frame.evaluate(() => {
+    go(cur(), 'chrome://about/');
+    go(cur(), 'chrome://version/');
+    cur().zoom = 1.25; applyZoom(cur());
+    const tab = cur();
+    groups.gtest = { id: 'gtest', name: 'work', color: 'blue', collapsed: false };
+    tab.group = 'gtest'; renderTabs();
+    newTab('chrome://flags/'); closeTab(tab);
+    reopenClosed();
+  });
+  await frame.waitForFunction(() => cur().url === 'chrome://version/');
+  const restored = await frame.evaluate(() => ({
+    urls: cur().hist.map(h => h.url), index: cur().idx, zoom: cur().zoom,
+    group: groups[cur().group] && groups[cur().group].name, position: tabs.indexOf(cur())
+  }));
+  assert.deepEqual(restored.urls, ['chrome://newtab/', 'chrome://about/', 'chrome://version/']);
+  assert.equal(restored.index, 2);
+  assert.equal(restored.zoom, 1.25);
+  assert.equal(restored.group, 'work');
+  assert.equal(restored.position, 0);
+  await frame.evaluate(() => { newTab(); closeTab(cur()); reopenClosed(); });
+  await frame.waitForFunction(() => tabs.length === 3);
+  assert.equal(await frame.evaluate(() => cur().url), 'chrome://newtab/');
+});
+
+test('a closed window restores its tabs, pinned state and active tab from another window', async t => {
+  const { page, frame: first } = await desktop(t);
+  await page.evaluate(() => WM.newWindow(false));
+  const second = await windowFrame(page, 1);
+  await second.evaluate(() => {
+    go(cur(), 'chrome://about/'); go(cur(), 'chrome://version/');
+    const firstTab = cur(); firstTab.pinned = true;
+    newTab('chrome://flags/'); activate(firstTab); saveSession();
+    closeWindow();
+  });
+  await page.waitForFunction(() => WM.wins.length === 1);
+  await key(first, { key: 'T', code: 'KeyT', ctrlKey: true, shiftKey: true }, '#url');
+  await page.waitForFunction(() => WM.wins.length === 2, null, { timeout: 3000 });
+  const restored = await windowFrame(page, 1);
+  assert.deepEqual(await restored.evaluate(() => ({
+    urls: tabs.map(x => x.url), pinned: tabs[0].pinned, active: cur().url, history: tabs[0].hist.map(h => h.url)
+  })), {
+    urls: ['chrome://version/', 'chrome://flags/'], pinned: true, active: 'chrome://version/',
+    history: ['chrome://newtab/', 'chrome://about/', 'chrome://version/']
+  });
+});
+
+test('closing the last tab can be undone from the desktop', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.evaluate(() => { go(cur(), 'chrome://about/'); go(cur(), 'chrome://version/'); });
+  await key(frame, { key: 'w', code: 'KeyW', ctrlKey: true }, '#url');
+  await page.waitForFunction(() => WM.wins.length === 0);
+  await page.locator('#desktop').click({ position: { x: 20, y: 20 } });
+  await page.keyboard.press('Control+Shift+T');
+  const restored = await windowFrame(page, 0);
+  assert.deepEqual(await restored.evaluate(() => cur().hist.map(h => h.url)),
+    ['chrome://newtab/', 'chrome://about/', 'chrome://version/']);
+});
+
+test('recently closed entries are restored newest-first and never include incognito windows', async t => {
+  const { page, frame: first } = await desktop(t);
+  await first.evaluate(() => { go(cur(), 'chrome://about/'); const tab = cur(); newTab('chrome://flags/'); closeTab(tab); });
+  await page.evaluate(() => WM.newWindow(false));
+  const second = await windowFrame(page, 1);
+  await second.evaluate(() => { go(cur(), 'chrome://version/'); closeWindow(); });
+  await page.waitForFunction(() => WM.wins.length === 1);
+  await page.evaluate(() => WM.newWindow(true));
+  const priv = await windowFrame(page, 1);
+  await key(priv, { key: 'T', code: 'KeyT', ctrlKey: true, shiftKey: true }, '#url');
+  await page.waitForTimeout(150);
+  assert.equal(await page.evaluate(() => WM.wins.length), 2, 'incognito windows must not reopen normal history');
+  assert.equal(await priv.evaluate(() => cur().url), 'chrome://newtab/');
+  await priv.evaluate(() => { newTab('chrome://about/'); closeTab(cur()); closeWindow(); });
+  await page.waitForFunction(() => WM.wins.length === 1);
+  await key(first, { key: 'T', code: 'KeyT', ctrlKey: true, shiftKey: true }, '#url');
+  const restoredWindow = await windowFrame(page, 1);
+  assert.equal(await restoredWindow.evaluate(() => cur().url), 'chrome://version/');
+  await key(first, { key: 'T', code: 'KeyT', ctrlKey: true, shiftKey: true }, '#url');
+  await first.waitForFunction(() => cur().url === 'chrome://about/');
+  assert.equal(await first.evaluate(() => tabs.length), 2);
+});
+
+test('tab search restoration keeps history and consumes the same queue entry', async t => {
+  const { frame } = await desktop(t);
+  await frame.evaluate(() => { go(cur(), 'chrome://about/'); go(cur(), 'chrome://version/'); const tab = cur(); newTab('chrome://flags/'); closeTab(tab); });
+  await frame.locator('#tabsearch').click();
+  await frame.locator('.tsr[data-c]').click();
+  assert.deepEqual(await frame.evaluate(() => cur().hist.map(h => h.url)),
+    ['chrome://newtab/', 'chrome://about/', 'chrome://version/']);
+  await frame.waitForFunction(() => !IWM.canReopen);
+  await key(frame, { key: 'T', code: 'KeyT', ctrlKey: true, shiftKey: true }, '#url');
+  await frame.waitForTimeout(150);
+  assert.equal(await frame.evaluate(() => tabs.length), 2);
+});
+
+test('continue startup preserves navigation history, zoom and the selected tab', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.evaluate(() => {
+    S.startup = 'continue'; saveS();
+    go(cur(), 'chrome://about/'); go(cur(), 'chrome://version/');
+    zoomStep(cur(), 3, true);
+    newTab('chrome://flags/');
+  });
+  await page.reload();
+  const restored = await windowFrame(page, 0);
+  assert.deepEqual(await restored.evaluate(() => ({
+    urls: tabs.map(x => x.url), active: cur().url, history: tabs[0].hist.map(h => h.url), index: tabs[0].idx, zoom: tabs[0].zoom
+  })), {
+    urls: ['chrome://version/', 'chrome://flags/'], active: 'chrome://flags/',
+    history: ['chrome://newtab/', 'chrome://about/', 'chrome://version/'], index: 2, zoom: 1.5
+  });
+});
+
+test('session restore ignores malformed history and caps it at 50 entries', async t => {
+  const hist = Array.from({ length: 80 }, (_, i) => ({ url: 'chrome://about/?n=' + i, title: 'n' + i }));
+  const { frame } = await desktop(t, {
+    settings: { startup: 'continue' },
+    wins: [{ id: 'saved', b: { x: 0, y: 0, w: 900, h: 650 }, max: true }],
+    'session.saved': [
+      { url: 'chrome://about/?n=79', hist, idx: 79, zoom: 99, active: true },
+      { url: 'chrome://version/', hist: [null, 3, { url: 5 }], idx: 'x', zoom: 'bad' }
+    ]
+  });
+  const state = await frame.evaluate(() => ({
+    n: tabs.length, h0: tabs[0].hist.length, i0: tabs[0].idx, last: tabs[0].hist[tabs[0].idx].url,
+    z0: tabs[0].zoom, h1: tabs[1].hist.map(h => h.url), z1: tabs[1].zoom
+  }));
+  assert.equal(state.n, 2);
+  assert.equal(state.h0, 50);
+  assert.equal(state.i0, 49);
+  assert.equal(state.last, 'chrome://about/?n=79');
+  assert.equal(state.z0, 1, 'out-of-range zoom is ignored');
+  assert.deepEqual(state.h1, ['chrome://version/']);
+  assert.equal(state.z1, 1);
+});
+
+test('restored windows keep their snapped layout through a viewport resize', async t => {
+  const { page, frame: first } = await desktop(t);
+  await first.evaluate(() => { S.startup = 'continue'; saveS(); go(cur(), 'chrome://about/'); });
+  await page.evaluate(() => WM.newWindow(false));
+  const second = await windowFrame(page, 1);
+  await second.evaluate(() => { go(cur(), 'chrome://version/'); IWM.post('snapl'); });
+  await page.waitForFunction(() => WM.wins[1].snap === 'l');
+  await page.reload();
+  const restoredFirst = await windowFrame(page, 0);
+  const restoredSecond = await windowFrame(page, 1);
+  assert.equal(await restoredFirst.evaluate(() => cur().url), 'chrome://about/');
+  assert.equal(await restoredSecond.evaluate(() => cur().url), 'chrome://version/');
+  assert.equal(await page.evaluate(() => WM.wins[1].snap), 'l');
+  await page.setViewportSize({ width: 1000, height: 700 });
+  await page.waitForFunction(() => WM.wins[1].b.w === 500);
+  assert.deepEqual(await page.evaluate(() => ({ x: WM.wins[1].b.x, w: WM.wins[1].b.w })), { x: 0, w: 500 });
+});
+
+test('simulated incognito states its limits, skips favicon requests and is not restorable', async t => {
+  const { page } = await desktop(t);
+  await page.evaluate(() => WM.newWindow(true, 'chrome://version/'));
+  const frame = await windowFrame(page, 1);
+  assert.equal(await frame.evaluate(() => cur().url), 'chrome://version/');
+  assert.match(await frame.locator('#incchip').getAttribute('data-tt'), /不是真正的无痕/);
+  assert.match(await frame.locator('#incchip').getAttribute('aria-label'), /模拟/);
+  await frame.evaluate(() => go(cur(), 'chrome://newtab/'));
+  const box = await frame.locator('.incbox').innerText();
+  assert.match(box, /不是真正的无痕/);
+  assert.match(box, /宿主浏览器/);
+  await frame.evaluate(() => document.querySelector('#profile').click());
+  await frame.waitForSelector('.prof', { state: 'attached' });
+  assert.match(await frame.evaluate(() => document.querySelector('.prof').textContent), /宿主浏览器仍可能保存/);
+  await frame.evaluate(() => { newTab('chrome://about/'); closeTab(cur()); reopenClosed(); });
+  await page.waitForTimeout(150);
+  assert.equal(await frame.evaluate(() => tabs.length), 1);
+  assert.equal(await frame.evaluate(() => closedStack.length), 0);
+  assert.equal(await frame.evaluate(() => fav('https://private.example/', 16).includes('google.com')), false);
+  const normal = await windowFrame(page, 0);
+  assert.equal(await normal.evaluate(() => fav('https://example.com/', 16).includes('google.com')), true);
+});
