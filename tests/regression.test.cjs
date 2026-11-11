@@ -470,3 +470,13 @@ test('find bar ignores hidden text and does not claim 0/0 for sandboxed web page
   await frame.evaluate(() => { document.querySelector('#findin').value = 'probe'; doFind(false); });
   assert.equal(await frame.evaluate(() => document.querySelector('#findcnt').textContent), '不可用');
 });
+
+test('tab hover cards still use the thumbnail and memory implementation', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.evaluate(() => { newTab('chrome://version/'); });
+  const first = frame.locator('.tab').first();
+  await first.hover();
+  await frame.waitForFunction(() => { const c = document.querySelector('#hcard'); return c && !c.hidden && c.querySelector('.hcm'); });
+  assert.match(await frame.evaluate(() => document.querySelector('#hcard .hcm').textContent), /内存用量/);
+  assert.equal(await frame.evaluate(() => typeof showHC), 'function');
+});
