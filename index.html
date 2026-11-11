@@ -1656,7 +1656,7 @@ function load(t,url){
   clearTimeout(t._lt);
   if(isInternal(url)){renderInternal(t,url)}
   else if(url==='about:blank'){t.kind='blank';setTitle(t,'about:blank')}
-  else if(!/^(https?|file|data|ftp):/i.test(url)){errorPage(t,'ERR_INVALID_URL')}
+  else if(!/^(https?|file|data|ftp):/i.test(url)){errorPage(t,/^[a-z][a-z0-9+.-]*:/i.test(url)?'ERR_UNKNOWN_URL_SCHEME':'ERR_INVALID_URL')}
   else if(!netOn()){errorPage(t,'ERR_INTERNET_DISCONNECTED')}
   else if(/^https?:/i.test(url)&&BLOCKED.test(hostOf(url))){errorPage(t,'ERR_BLOCKED_BY_RESPONSE')}
   else{
@@ -2373,7 +2373,8 @@ function errorPage(t,code,chromeBad){
   if(code==='ERR_BLOCKED_BY_RESPONSE'){h1=`${esc(host)} 已拒绝连接。`;p='该网站不允许被嵌入到 iframe 框架中显示（X-Frame-Options / CSP frame-ancestors）。';tips=['尝试在宿主浏览器中打开此页面','检查网络连接','检查代理服务器和防火墙'];det='此网站的响应头禁止在框架内显示，这是由网站所有者设置的安全策略，Iridium 无法绕过。'}
   else if(code==='ERR_INTERNET_DISCONNECTED'){h1='无网络连接';p='请尝试：';tips=['检查网线、调制解调器和路由器','重新连接到 Wi-Fi 网络'];det='您的设备当前处于离线状态。'}
   else if(chromeBad){h1='无法访问此页面';p=`找不到 <b>${esc(t.url)}</b> 对应的页面。`;tips=['检查网址是否正确','在 chrome://about 中查看支持的内部页面'];code='ERR_INVALID_URL';det='Iridium 没有名为此网址的内部页面。'}
-  else{h1='无法访问此网站';p=`网址 <b>${esc(t.url)}</b> 无效或使用了不受支持的协议。`;tips=['检查网址是否有拼写错误'];det='此网址使用了 Iridium 无法处理的协议或格式。'}
+  else if(code==='ERR_UNKNOWN_URL_SCHEME'){const sc=(t.url.match(/^([a-z][a-z0-9+.-]*):/i)||[])[1];h1='无法访问此网站';p='该网址使用了不受支持的协议。';tips=['检查网址是否有拼写错误','改用 https:// 等受支持的协议重新输入'];det='Iridium 无法打开'+(sc?' '+sc+': ':'此')+'协议的网址，该协议可能属于其他应用程序。'}
+  else{h1='无法访问此网站';p=`网址 <b>${esc(t.url)}</b> 无效。`;tips=['检查网址是否有拼写错误'];det='此网址的格式无效，Iridium 无法解析。'}
   const root=el(`<div class="pg"><div class="err">${svg(P.sad,72).replace('<svg','<svg class="eico"')}<h1>${h1}</h1><div>${p}</div><ul>${tips.map(x=>`<li>${x}</li>`).join('')}</ul><div class="ecode">${code}</div><div class="ebtn"><button class="btn" data-d="1">详细信息</button><div style="display:flex;gap:10px">${code==='ERR_BLOCKED_BY_RESPONSE'?'<button class="btn" data-o="1">在宿主浏览器中打开</button>':''}<button class="btn pri" data-r="1">重新加载</button></div></div><div class="edmore" hidden>${det}</div>${code==='ERR_INTERNET_DISCONNECTED'?'<div class="dinowrap"><canvas></canvas></div>':''}</div></div>`);
   root.addEventListener('click',e=>{if(e.target.closest('[data-r]'))load(t,t.url);if(e.target.closest('[data-o]'))openReal(t.url);if(e.target.closest('[data-d]')){const m=$('.edmore',root);m.hidden=!m.hidden}});
   t.view.appendChild(root);
