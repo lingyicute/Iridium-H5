@@ -3253,7 +3253,7 @@ const KEY='iridium.downloads',EXT=/\.(zip|rar|7z|tar|gz|tgz|bz2|xz|exe|msi|dmg|p
 const TYPES=[[/zip|rar|7z|tar|gz|tgz|bz2|xz/,'#f9ab00'],[/pdf/,'#d93025'],[/docx?|epub/,'#1a73e8'],[/xlsx?|csv/,'#188038'],[/pptx?/,'#e8710a'],[/mp3|flac|wav|ogg/,'#a142f4'],[/mp4|mkv|avi|mov|webm/,'#d01884'],[/exe|msi|dmg|pkg|deb|rpm|apk|appimage|jar|bin|iso|img/,'#5f6368']];
 const PATH={pause:'M6 19h4V5H6v14zm8-14v14h4V5h-4z',play:'M8 5v14l11-7z',x:'M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',more:'M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z',folder:'M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z',retry:'M17.65 6.35A7.958 7.958 0 0012 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08A5.99 5.99 0 0112 18c-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z'};
 let DL=[];
-const loadDL=()=>{if(INC)return[];try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a.map(d=>Object.assign(d,{state:d.state==='prog'||d.state==='pause'?'canc':d.state})):[]}catch(e){return[]}};
+const loadDL=()=>{if(INC)return[];try{const a=JSON.parse(localStorage.getItem(KEY)||'[]');return Array.isArray(a)?a.map(d=>Object.assign(d,{state:d.state==='prog'||d.state==='pause'?'intl':d.state})):[]}catch(e){return[]}};
 DL=loadDL();window.addEventListener('storage',e=>{if(e.key===KEY&&!INC){const act=DL.filter(d=>live[d.id]);const ids=new Set(act.map(d=>d.id));DL=[...act,...loadDL().filter(d=>!ids.has(d.id))];render()}});
 const live={};/* id -> {ctl,gate} */
 const save=()=>{if(INC)return;try{localStorage.setItem(KEY,JSON.stringify(DL.slice(0,60).map(d=>({id:d.id,name:d.name,url:d.url,size:d.size,got:d.got,state:d.state,ts:d.ts}))))}catch(e){}};
@@ -3271,6 +3271,7 @@ function status(d){
   if(d.state==='pause')return '已暂停 · '+fmt(d.got)+(d.size?' / '+fmt(d.size):'');
   if(d.state==='done')return (fmt(d.size||d.got)?fmt(d.size||d.got)+' · ':'')+h;
   if(d.state==='external')return '已交由宿主浏览器下载（状态未知）';
+  if(d.state==='intl')return '已中断';
   if(d.state==='canc')return '已取消';
   if(d.state==='gone')return '文件已被删除';
   return '失败 — '+(d.msg||'网络错误');
@@ -3295,7 +3296,7 @@ let bub=null;
 function rowHtml(d,page){
   const act=d.state==='prog'||d.state==='pause';
   const bar=act?`<div class="dlbar${d.size?'':' ind'}"><i style="width:${d.size?Math.min(100,d.got/d.size*100):0}%"></i></div>`:'';
-  const err=d.state==='fail';
+  const err=d.state==='fail'||d.state==='intl';
   if(page){
     return `<div class="dlrow ${d.state==='canc'?'canc':''}${d.state==='gone'?' gone':''}" data-id="${d.id}"><div class="dlt">${new Date(d.ts).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false})}</div><div class="dli">${fileIcon(d.name,32)}</div><div class="dlm">${d.state==='done'?`<a data-a="open">${esc(d.name)}</a>`:`<span>${esc(d.name)}</span>`}<div class="dls" style="white-space:normal">${esc(d.url.length>90?d.url.slice(0,90)+'…':d.url)}</div><div class="dls${err?' dlerr':''}">${esc(status(d))}</div>${bar}<div style="margin-top:6px">${act?`<a class="dllk" data-a="${d.state==='pause'?'resume':'pause'}">${d.state==='pause'?'继续':'暂停'}</a><a class="dllk" data-a="cancel">取消</a>`:(d.state==='done'?'<a class="dllk" data-a="show">在文件夹中显示</a>':'<a class="dllk" data-a="retry">重试</a>')}</div></div><div class="dlx"><button data-a="remove" title="从列表中删除">${sv(PATH.x)}</button></div></div>`;
   }

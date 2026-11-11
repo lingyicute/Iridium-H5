@@ -399,3 +399,17 @@ test('unsupported schemes show ERR_UNKNOWN_URL_SCHEME and malformed URLs keep ER
   r = await read();
   assert.equal(r.code, 'ERR_INVALID_URL');
 });
+
+test('downloads unfinished in a previous session are shown as interrupted, not canceled', async t => {
+  const ts = Date.now();
+  const mk = (id, state) => ({ id, name: id + '.zip', url: 'https://example.com/' + id + '.zip', size: 1000, got: 400, state, ts });
+  const { frame } = await desktop(t, { downloads: [mk('a', 'prog'), mk('b', 'pause'), mk('c', 'done'), mk('d', 'canc')] });
+  await frame.evaluate(() => openInternal('chrome://downloads/'));
+  await frame.waitForFunction(() => document.querySelector('.dlrow'));
+  const rows = await frame.evaluate(() => [...document.querySelectorAll('.dlrow')].map(r => ({ text: [...r.querySelectorAll('.dls')].pop().textContent, err: !!r.querySelector('.dlerr'), retry: !!r.querySelector('[data-a="retry"]'), bar: !!r.querySelector('.dlbar') })));
+  assert.deepEqual(rows[0], { text: '已中断', err: true, retry: true, bar: false });
+  assert.equal(rows[1].text, '已中断');
+  assert.equal(rows[3].text, '已取消');
+  assert.equal(rows[3].err, false);
+  assert.equal(await frame.evaluate(() => document.querySelector('#dlBtn').classList.contains('busy')), false);
+});
