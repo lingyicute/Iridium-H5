@@ -1137,6 +1137,8 @@ const $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const el=h=>{const t=document.createElement('template');t.innerHTML=h.trim();return t.content.firstChild};
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-3);
+const isRecord=o=>o!==null&&typeof o==='object'&&!Array.isArray(o);
+const composing=e=>e.isComposing||e.keyCode===229;
 const store={get(k,d){try{const v=localStorage.getItem('iridium.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('iridium.'+k,JSON.stringify(v))}catch(e){}}};
 
 const svg=(d,s=20)=>`<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="currentColor"><path d="${d}"/></svg>`;
@@ -1218,11 +1220,17 @@ const ENGINES={
 };
 const defS={theme:'system',showBm:true,showHome:false,engine:'iridium',startup:'ntp',startupUrl:'',dnt:false,ntpBg:'',flags:{},devMode:false,accent:'default',showTiles:true,pageZoom:'100',
   shortcuts:[{t:'维基百科',u:'https://zh.wikipedia.org/'},{t:'Example Domain',u:'https://example.com/'},{t:'MDN Web Docs',u:'https://developer.mozilla.org/zh-CN/'},{t:'OpenStreetMap',u:'https://www.openstreetmap.org/'},{t:'W3C',u:'https://www.w3.org/'}]};
-const freshS=extra=>{const c=JSON.parse(JSON.stringify(defS)),o=Object.assign(c,extra);if(!o.flags||typeof o.flags!=='object')o.flags={};if(!Array.isArray(o.shortcuts))o.shortcuts=c.shortcuts;return o};
+const freshS=extra=>{
+  const defaults=JSON.parse(JSON.stringify(defS)),o={...defaults,...(isRecord(extra)?extra:{})};
+  if(!isRecord(o.flags))o.flags={};
+  o.shortcuts=Array.isArray(o.shortcuts)?o.shortcuts.filter(s=>isRecord(s)&&typeof s.t==='string'&&typeof s.u==='string').slice(0,10):defaults.shortcuts;
+  return o;
+};
 let S=freshS(store.get('settings',{}));
 const saveS=()=>store.set('settings',S);
 const isNtpUrl=u=>/^chrome:\/\/(newtab|new-tab-page)(\/|$|\?|#)/i.test(u||'');
-let BM=store.get('bm',null);if(!BM||!Array.isArray(BM.bar)||!Array.isArray(BM.other))BM={bar:[
+const validBmList=(a,depth=0)=>Array.isArray(a)&&depth<32&&a.every(n=>isRecord(n)&&typeof n.id==='string'&&typeof n.title==='string'&&((n.type==='url'&&typeof n.url==='string')||(n.type==='folder'&&validBmList(n.children,depth+1))));
+let BM=store.get('bm',null);if(!isRecord(BM)||!validBmList(BM.bar)||!validBmList(BM.other))BM={bar:[
   {id:uid(),type:'url',title:'维基百科',url:'https://zh.wikipedia.org/'},
   {id:uid(),type:'url',title:'Example Domain',url:'https://example.com/'},
   {id:uid(),type:'folder',title:'开发',children:[
@@ -1231,7 +1239,8 @@ let BM=store.get('bm',null);if(!BM||!Array.isArray(BM.bar)||!Array.isArray(BM.ot
     {id:uid(),type:'url',title:'lingyicute 的 GitHub',url:'https://github.com/lingyicute'}]},
   {id:uid(),type:'url',title:'OpenStreetMap',url:'https://www.openstreetmap.org/'}
 ],other:[]};
-let HIST=INC?[]:store.get('hist',[]);if(!Array.isArray(HIST))HIST=[];
+const historyList=a=>Array.isArray(a)?a.filter(h=>isRecord(h)&&typeof h.id==='string'&&typeof h.url==='string'&&typeof h.title==='string'&&Number.isFinite(h.time)):[];
+let HIST=INC?[]:historyList(store.get('hist',[]));
 const saveH=()=>{if(!INC)store.set('hist',HIST)};
 const saveBM=()=>{store.set('bm',BM);onDataChange()};
 
@@ -1246,7 +1255,7 @@ function allUrls(){const r=[];walk(BM.bar,n=>{if(n.type==='url')r.push(n)});walk
 function allFolders(){const r=[];walk(BM.bar,n=>{if(n.type==='folder')r.push(n)});walk(BM.other,n=>{if(n.type==='folder')r.push(n)});return r}
 function addHistory(url,title){
   if(INC||!/^https?:/i.test(url))return;
-  const f=HIST[0];if(f&&f.url===url&&Date.now()-f.time<2500){f.title=title||f.title;return}
+  const f=HIST[0];if(f&&f.url===url&&Date.now()-f.time<2500){f.title=title||f.title;saveH();onDataChange();return}
   HIST.unshift({id:uid(),url,title:title||url,time:Date.now()});
   if(HIST.length>3000)HIST.length=3000;saveH();onDataChange();
 }
@@ -1286,7 +1295,7 @@ function closePopups(){
     gh.forEach(g=>{g.classList.add('gout');setTimeout(()=>g.remove(),110)})},0);
 }
 document.addEventListener('mousedown',e=>{wasOwner=layer.dataset.owner||'';if(!e.target.closest('.popup'))closePopups()},true);
-window.addEventListener('blur',()=>{closePopups();hideSugg()});
+window.addEventListener('blur',()=>{clearTimeout(tabFocusTimer);closePopups();hideSugg()});
 function toggler(btn,owner,fn){btn.addEventListener('click',e=>{const was=wasOwner;wasOwner='';if(e.detail>0&&was===owner)return;fn(e)})}
 function popBottom(){return innerHeight-(document.body.classList.contains('fs')||EMB?0:48)-4}
 function placeAt(m,x,y,right){
@@ -1376,13 +1385,13 @@ function dialog(title,body,btns){
   {const rm0=ov.remove.bind(ov);ov.remove=()=>{if(ov._c)return;ov._c=1;document.removeEventListener('keydown',dk,true);ov.classList.add('out');setTimeout(rm0,130)}}
   btns.forEach(b=>{const x=el(`<button class="btn${b.pri?' pri':''}">${b.text}</button>`);x.onclick=()=>{if(b.fn&&b.fn(ov)===false)return;ov.remove()};$('.dbtn',ov).append(x)});
   ov.addEventListener('mousedown',e=>{if(e.target===ov)ov.remove()});
-  ov.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'){const p=$('.btn.pri',ov);p&&p.click()}});
+  ov.addEventListener('keydown',e=>{if(!composing(e)&&e.key==='Enter'&&e.target.tagName==='INPUT'){const p=$('.btn.pri',ov);p&&p.click()}});
   document.body.append(ov);const i=$('input',ov);i&&(i.focus(),i.select());return ov;
 }
 let toastT;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200)}
 
 /* ============ 标签页 ============ */
-let tabs=[],activeTab=null,closedStack=[];
+let tabs=[],activeTab=null,closedStack=[],tabFocusTimer=0;
 const tabsEl=$('#tabs'),content=$('#content');
 const cur=()=>activeTab;
 const byId=id=>tabs.find(t=>t.id===id);
@@ -1396,13 +1405,13 @@ function newTab(url,opt={}){
   go(t,url||'chrome://newtab/');
   if(!opt.bg)activate(t);
   saveSession();
-  if(!opt.bg&&(!url||isNtpUrl(t.url)))setTimeout(focusOmni,30);
+  if(!opt.bg&&(!url||isNtpUrl(t.url)))tabFocusTimer=setTimeout(()=>{if(activeTab===t)focusOmni()},30);
   return t;
 }
 function activate(t){
-  activeTab=t;tabs.forEach(x=>{x.view.style.display=x===t?'block':'none'});
+  clearTimeout(tabFocusTimer);activeTab=t;tabs.forEach(x=>{x.view.style.display=x===t?'block':'none'});
   if(t.group&&groups[t.group])groups[t.group].collapsed=false;
-  tabs.forEach(fillTab);renderGroups();applyZoom(t);updateUI();$('#findbar').hidden=true;
+  tabs.forEach(fillTab);renderGroups();applyZoom(t);updateUI();$('#findbar').hidden=true;saveSession();
 }
 function pushClosed(t,i){clearTimeout(t._lt);if(t.el)try{tro.unobserve(t.el)}catch(e){}if(t.url&&!isNtpUrl(t.url)){closedStack.push({url:t.url,title:t.title||'',pinned:t.pinned,index:i});if(closedStack.length>25)closedStack.shift()}}
 function closeTab(t,fromMouse){
@@ -1479,7 +1488,7 @@ function tabMenu(t,x,y){
     ...(window.IWM?IWM.tabMenuItems(t,ic):[]),
     {label:'在宿主浏览器中打开此页',icon:ic(P.ext),disabled:!/^https?:/i.test(t.url),fn:()=>openReal(t.url)},'-',
     {label:'关闭',icon:ic(P.close),key:'Ctrl+W',fn:()=>closeTab(t)},
-    {label:'关闭其他标签页',disabled:tabs.length<2,fn:()=>{tabs.forEach((o,idx)=>{if(o!==t){pushClosed(o,idx);o.view.remove()}});tabs=[t];activate(t);renderTabs();saveSession()}},
+    {label:'关闭其他标签页',disabled:!tabs.some(o=>o!==t&&!o.pinned),fn:()=>{tabs.forEach((o,idx)=>{if(o!==t&&!o.pinned){pushClosed(o,idx);o.view.remove()}});tabs=tabs.filter(o=>o===t||o.pinned);activate(t);renderTabs();saveSession()}},
     {label:'关闭右侧标签页',disabled:i>=tabs.length-1,fn:()=>{tabs.slice(i+1).forEach((o,idx)=>{pushClosed(o,i+1+idx);o.view.remove()});tabs=tabs.slice(0,i+1);if(!tabs.includes(activeTab))activate(t);renderTabs();saveSession()}},
     '-',{label:'重新打开已关闭的标签页',key:'Ctrl+Shift+T',disabled:!closedStack.length,fn:reopenClosed}
   ],x,y);
@@ -1609,7 +1618,7 @@ function showHC(te){
 tabsEl.addEventListener('mouseover',e=>{const te=e.target.closest('.tab');if(!te||te===hcTab||te.classList.contains('drag'))return;hcTab=te;clearTimeout(hcT);hcT=setTimeout(()=>showHC(te),hcard.hidden?500:50)});
 tabsEl.addEventListener('mouseleave',hideHC);
 tabsEl.addEventListener('mousedown',hideHC,true);
-function saveSession(){if(INC||!tabs.length)return;store.set(SK,tabs.map(t=>({url:t.url,pinned:t.pinned,g:t.group||undefined})));store.set(GK,Object.fromEntries(Object.values(groups).map(g=>[g.id,{id:g.id,name:g.name,color:g.color,collapsed:!!g.collapsed}])))}
+function saveSession(){if(INC||!tabs.length)return;store.set(SK,tabs.map(t=>({url:t.url,pinned:t.pinned,active:t===activeTab,g:t.group||undefined})));store.set(GK,Object.fromEntries(Object.values(groups).map(g=>[g.id,{id:g.id,name:g.name,color:g.color,collapsed:!!g.collapsed}])))}
 
 /* ============ 导航 ============ */
 const BLOCKED=/(^|\.)(google\.[a-z.]+|youtube\.com|facebook\.com|instagram\.com|twitter\.com|x\.com|github\.com|linkedin\.com|reddit\.com|netflix\.com|amazon\.[a-z.]+|paypal\.com|tiktok\.com|discord\.com|twitch\.tv|pinterest\.com|whatsapp\.com|openai\.com|chatgpt\.com|apple\.com)$/i;
@@ -1632,7 +1641,7 @@ function isInternal(url){return /^(chrome|chrome-search):/i.test(url)}
 function hostOf(url){try{return new URL(url).hostname}catch(e){return url}}
 function go(t,input,opt={}){
   const url=resolve(input);
-  if(/^chrome:\/\/os-settings/i.test(url)){const sec=url.replace(/^chrome:\/\/os-settings\/?/i,'').split(/[/?#]/)[0];openOsSettings(sec);if(t&&!t.url)load(t,'chrome://newtab/');else updateUI();return}
+  if(/^chrome:\/\/os-settings(?:[/?#]|$)/i.test(url)){const sec=url.replace(/^chrome:\/\/os-settings\/?/i,'').split(/[/?#]/)[0];openOsSettings(sec);if(t&&!t.url)load(t,'chrome://newtab/');else updateUI();return}
   t.hist=t.hist.slice(0,t.idx+1);t.hist.push({url,title:''});t.idx=t.hist.length-1;
   load(t,url);
 }
@@ -1646,6 +1655,9 @@ function load(t,url){
   else if(/^https?:/i.test(url)&&BLOCKED.test(hostOf(url))){errorPage(t,'ERR_BLOCKED_BY_RESPONSE')}
   else{
     const f=document.createElement('iframe');
+    /* 网页与桌面不能共享源；不要添加 allow-same-origin 或顶层导航权限。 */
+    f.setAttribute('sandbox','allow-scripts allow-forms allow-modals allow-popups allow-downloads allow-presentation');
+    f.title='网页内容';
     f.allow='fullscreen; clipboard-write; geolocation; microphone; camera; autoplay; encrypted-media; picture-in-picture';
     t.frame=f;t.loading=true;t.kind='web';
     let u0;try{u0=new URL(url)}catch(e){}
@@ -1805,6 +1817,7 @@ function inlineAC(e){
 }
 urlIn.addEventListener('input',e=>{if(!kw){const m=urlIn.value.match(/^(@\S+)\s$/);if(m){const k=KWS.find(k=>k.k===m[1].toLowerCase()||k.zh===m[1]);if(k){setKw(k);return}}}refreshSugg();if(!kw)inlineAC(e)});
 urlIn.addEventListener('keydown',e=>{
+  if(composing(e))return;
   if(e.key==='ArrowDown'||e.key==='ArrowUp'){
     e.preventDefault();if(sugg.hidden){refreshSugg();return}
     const n=sgItems.length;sgSel=e.key==='ArrowDown'?(sgSel+1>=n?-1:sgSel+1):(sgSel-1<-1?n-1:sgSel-1);
@@ -1945,7 +1958,7 @@ function bookmarkBubble(t){
   const fin=()=>{n.title=$('#bbn',b).value.trim()||n.title;const f=$('#bbf',b).value;if(parentOf(n.id)!==f){removeNode(n.id);listOf(f).push(n)}saveBM()};
   $('#bbd',b).onclick=()=>{fin();closePopups()};
   $('#bbr',b).onclick=()=>{removeNode(n.id);saveBM();closePopups()};
-  $('#bbn',b).addEventListener('keydown',e=>{if(e.key==='Enter')$('#bbd',b).click()});
+  $('#bbn',b).addEventListener('keydown',e=>{if(!composing(e)&&e.key==='Enter')$('#bbd',b).click()});
   $('#bbn',b).focus();$('#bbn',b).select();
 }
 toggler($('#star'),'star',()=>{const t=cur();if(t&&t.url&&!isNtpUrl(t.url)&&t.kind!=='error')bookmarkBubble(t)});
@@ -2097,8 +2110,8 @@ $('#findup').onclick=()=>doFind(true);$('#finddn').onclick=()=>doFind(false);$('
 /* ============ 清除数据 ============ */
 function clearDataDialog(){
   dialog('清除浏览数据',`<label class="fld"><span>时间范围</span><select id="cr"><option value="3600000">过去一小时</option><option value="86400000">过去 24 小时</option><option value="604800000">过去 7 天</option><option value="2419200000">过去 4 周</option><option value="0" selected>时间不限</option></select></label>
-  <label class="chk"><input type="checkbox" id="c1" checked> 浏览记录</label><label class="chk"><input type="checkbox" id="c2" checked> Cookie 及其他网站数据</label><label class="chk"><input type="checkbox" id="c3" checked> 缓存的图片和文件</label>`,
-  [{text:'取消'},{text:'清除数据',pri:true,fn:ov=>{const r=+$('#cr',ov).value,c1=$('#c1',ov).checked;if(!c1&&!$('#c2',ov).checked&&!$('#c3',ov).checked){toast('请至少选择一项要清除的数据');return false}if(c1){HIST=r?HIST.filter(h=>Date.now()-h.time>r):[];saveH();onDataChange()}toast(c1?'已清除所选浏览数据':'已清除所选数据')}}]);
+  <label class="chk"><input type="checkbox" id="c1" checked> 模拟浏览记录</label><label class="chk"><input type="checkbox" id="c2" disabled> Cookie 及其他网站数据（由宿主浏览器管理）</label><label class="chk"><input type="checkbox" id="c3" disabled> 缓存的图片和文件（由宿主浏览器管理）</label><p style="color:var(--text2)">此演示只能清除模拟浏览记录，不能清除宿主浏览器或跨域网站的数据。</p>`,
+  [{text:'取消'},{text:'清除数据',pri:true,fn:ov=>{const r=+$('#cr',ov).value;if(!$('#c1',ov).checked){toast('请至少选择一项要清除的数据');return false}HIST=r?HIST.filter(h=>Date.now()-h.time>r):[];saveH();onDataChange();toast('已清除所选模拟浏览记录')}}]);
 }
 function newWindow(url){if(window.IWM)IWM.post('newwin',{url:url||null});else if(window.WM)WM.newWindow(false,url);else window.open(location.href.split('?')[0],'_blank')}
 function newIncognito(url){if(window.IWM){IWM.post('newwin',{inc:true,url:url||null});return}if(window.WM){WM.newWindow(true,url);return}const base=location.href.split('?')[0].split('#')[0];window.open(base+'?incognito=1'+(url?'&u='+encodeURIComponent(url):''),'_blank')}
@@ -2122,13 +2135,14 @@ const fmtTime=ts=>new Date(ts).toLocaleTimeString('zh-CN',{hour:'numeric',minute
 function pageNTP(t){
   t.title='新标签页';
   if(INC){
-    return el(`<div class="pg ntp"><div class="incbox">${svg(P.inc,72)}<h1>您已进入无痕模式</h1><p>现在，其他使用此设备的用户将看不到您的活动记录，因此您可以更放心地进行私密浏览。此模式不会改变数据被网站及其所用的互联网服务提供商或雇主收集的方式。</p><p><b>Iridium 不会保存：</b></p><ul style="margin:0 0 0 20px;list-style:disc"><li>您的浏览记录</li><li>Cookie 和网站数据</li><li>表单中输入的信息</li></ul><p><b>您的活动仍可能对以下各方可见：</b></p><ul style="margin:0 0 0 20px;list-style:disc"><li>您访问的网站</li><li>您的雇主或学校</li><li>您的互联网服务提供商</li></ul></div></div>`);
+    return el(`<div class="pg ntp"><div class="incbox">${svg(P.inc,72)}<h1>您已进入无痕模式</h1><p><b>仅为界面模拟：</b>本应用不保存此窗口的模拟历史记录和会话，但无法创建真正的无痕浏览上下文，不能保证隔离宿主浏览器的 Cookie、网站存储或网络活动。敏感浏览请使用宿主浏览器的无痕窗口。</p><p>现在，其他使用此设备的用户将看不到您的活动记录，因此您可以更放心地进行私密浏览。此模式不会改变数据被网站及其所用的互联网服务提供商或雇主收集的方式。</p><p><b>Iridium 不会保存：</b></p><ul style="margin:0 0 0 20px;list-style:disc"><li>您的浏览记录</li><li>模拟标签页会话</li></ul><p><b>您的活动仍可能对以下各方可见：</b></p><ul style="margin:0 0 0 20px;list-style:disc"><li>您访问的网站</li><li>您的雇主或学校</li><li>您的互联网服务提供商</li></ul></div></div>`);
   }
   const dk=/#(2b2d42|0f2027)/.test(S.ntpBg);
-  const root=el(`<div class="pg ntp${dk?' dk':''}" style="${S.ntpBg?'background:'+S.ntpBg:''}"><div class="ntpc"><div class="ntplogo">${IRI(64)}<span>Iridium</span></div><div class="ntpsearch">${I.search}<input placeholder="在 Iridium 中搜索，或者输入网址" spellcheck="false"><span class="mic" title="语音搜索">${svg(P.mic,22)}</span><span class="mic lens" title="按图搜索">${svg('M4 4h5v2H6v3H4V4zm11 0h5v5h-2V6h-3V4zM4 15h2v3h3v2H4v-5zm14 0h2v3h-3v2h-5v-2h3v-3zM12 8.2a3.8 3.8 0 100 7.6 3.8 3.8 0 000-7.6zm0 2a1.8 1.8 0 110 3.6 1.8 1.8 0 010-3.6z',22)}</span></div><div class="tiles"${S.showTiles===false?' hidden':''}></div></div><button class="cust">${svg(P.edit,16)}自定义 Iridium</button></div>`);
+  const root=el(`<div class="pg ntp${dk?' dk':''}"><div class="ntpc"><div class="ntplogo">${IRI(64)}<span>Iridium</span></div><div class="ntpsearch">${I.search}<input placeholder="在 Iridium 中搜索，或者输入网址" spellcheck="false"><span class="mic" title="语音搜索">${svg(P.mic,22)}</span><span class="mic lens" title="按图搜索">${svg('M4 4h5v2H6v3H4V4zm11 0h5v5h-2V6h-3V4zM4 15h2v3h3v2H4v-5zm14 0h2v3h-3v2h-5v-2h3v-3zM12 8.2a3.8 3.8 0 100 7.6 3.8 3.8 0 000-7.6zm0 2a1.8 1.8 0 110 3.6 1.8 1.8 0 010-3.6z',22)}</span></div><div class="tiles"${S.showTiles===false?' hidden':''}></div></div><button class="cust">${svg(P.edit,16)}自定义 Iridium</button></div>`);
+  if(typeof S.ntpBg==='string')root.style.background=S.ntpBg;
   const inp=$('input',root);
   $$('.mic',root).forEach(m=>m.addEventListener('click',()=>toast('此功能在 Iridium 中不可用')));
-  inp.addEventListener('keydown',e=>{if(e.key==='Enter'&&inp.value.trim())go(t,inp.value)});
+  inp.addEventListener('keydown',e=>{if(!composing(e)&&e.key==='Enter'&&inp.value.trim())go(t,inp.value)});
   const tiles=$('.tiles',root);
   const draw=()=>{
     tiles.innerHTML=S.shortcuts.map((s,i)=>`<div class="tile" data-i="${i}"><button class="tmore" data-m="${i}" title="更多操作">${svg(P.more,16)}</button><div class="tico">${fav(s.u,26)}</div><div class="tname">${esc(s.t)}</div></div>`).join('')+(S.shortcuts.length<10?`<div class="tile" data-add="1"><div class="tico">${svg(P.add,24)}</div><div class="tname">添加快捷方式</div></div>`:'');
@@ -2278,7 +2292,7 @@ function pageDino(t){
 function pageSearch(t,u){
   const q=u.searchParams.get('q')||'';t.title=q+' - Iridium 搜索';
   const root=el(`<div class="pg"><div class="ptop"><div class="ptitle" style="min-width:0">${IRI(30)}<span>搜索</span></div><div class="psearch">${I.search}<input value="${esc(q)}" spellcheck="false"></div></div><div class="res"><div class="list" style="color:var(--text2)">正在搜索…</div></div></div>`);
-  $('input',root).addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.value.trim())go(t,e.target.value)});
+  $('input',root).addEventListener('keydown',e=>{if(!composing(e)&&e.key==='Enter'&&e.target.value.trim())go(t,e.target.value)});
   const alts=['bing','google','ddg','baidu'].map(k=>`<a data-url="${esc(ENGINES[k].url.replace('%s',encodeURIComponent(q)))}">${ENGINES[k].name}</a>`).join(' · ');
   fetch(`https://zh.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q)}&format=json&origin=*&srlimit=12`).then(r=>r.json()).then(d=>{
     const rs=(d.query&&d.query.search)||[];const box=$('.list',root);if(!box.isConnected)return;
@@ -2462,8 +2476,13 @@ function restoreStart0(mode,url){
   if(url){newTab(url);return}
   if(mode==='new'){newTab();return}
   if(!EMB&&p.get('u')){newTab(p.get('u'));return}
-  const ses=store.get(SK,[]);
-  if(!INC&&S.startup==='continue'&&ses.length){const sg=store.get(GK,{});const nt=ses.map(s=>newTab(s.url,{pinned:s.pinned,bg:true}));nt.forEach((t,i)=>{const gid=ses[i].g;if(gid&&sg[gid]){if(!groups[gid])groups[gid]=Object.assign({},sg[gid]);t.group=gid}});renderTabs();activate(tabs[0]);saveSession();return}
+  const raw=store.get(SK,[]),ses=Array.isArray(raw)?raw.filter(s=>isRecord(s)&&typeof s.url==='string'):[];
+  if(!INC&&S.startup==='continue'&&ses.length){
+    const rawGroups=store.get(GK,{}),sg=isRecord(rawGroups)?rawGroups:{};
+    const nt=ses.map(s=>newTab(s.url,{pinned:!!s.pinned,bg:true}));
+    nt.forEach((t,i)=>{const gid=ses[i].g,g=sg[gid];if(!t.pinned&&typeof gid==='string'&&isRecord(g)){if(!groups[gid])groups[gid]={id:gid,name:typeof g.name==='string'?g.name:'',color:Object.hasOwn(GCOL,g.color)?g.color:'grey',collapsed:!!g.collapsed};t.group=gid}});
+    renderTabs();activate(nt[ses.findIndex(s=>s.active===true)]||nt[0]);saveSession();return;
+  }
   if(!INC&&S.startup==='url'&&S.startupUrl){newTab(S.startupUrl);return}
   newTab();
 }
@@ -2514,8 +2533,17 @@ if(INC){const ic=$('#incchip');ic.hidden=false;ic.innerHTML=svg(P.inc,18)+'无�
 
 /* ============ 快捷键 ============ */
 document.addEventListener('keydown',e=>{
+  if(composing(e))return;
+  /* ChromeOS 的 Launcher 键是 Meta，不是 Ctrl；系统快捷键先于地址栏处理。 */
+  const systemAction=e.metaKey&&!e.ctrlKey&&!e.altKey&&!e.shiftKey&&e.code==='KeyL'?'lock':e.altKey&&e.shiftKey&&!e.ctrlKey&&!e.metaKey&&e.code==='KeyS'?'quicksettings':null;
+  if(systemAction){
+    if(document.body.classList.contains('locked')||$('#poff'))return;
+    e.preventDefault();e.stopImmediatePropagation();clearTimeout(tabFocusTimer);
+    if(EMB)IWM.post(systemAction);else if(systemAction==='lock')lockScreen();else toggleQS();
+    return;
+  }
   if(!win.open||win.min||document.body.classList.contains('locked'))return;
-  const c=e.ctrlKey||e.metaKey,k=(e.key||'').toLowerCase(),t=cur();
+  const c=e.ctrlKey,k=(e.key||'').toLowerCase(),t=cur();
   const stop=()=>{e.preventDefault();e.stopPropagation()};
   if(c&&!e.shiftKey&&k==='t'){stop();newTab()}
   else if(c&&!e.shiftKey&&k==='w'){stop();t&&closeTab(t)}
@@ -2653,15 +2681,15 @@ let calM=null;
 function toggleQS(cal){
   if(osOpen==='qs'&&!cal){closeOS();return}
   closeOS();closePopups();osOpen='qs';$('#status').classList.add('on');
-  const b=el('<div class="osb" id="qs"></div>');document.body.append(b);
-  calM=cal?new Date():null;drawQS(b);
+  const b=el('<div class="osb" id="qs" tabindex="-1" role="dialog" aria-label="快速设置"></div>');document.body.append(b);
+  calM=cal?new Date():null;drawQS(b);b.focus();
   b.addEventListener('input',e=>{const k=e.target.dataset.s;if(!k)return;OS[k]=+e.target.value;if(k==='vol'){if(OS.vol>0)OS._vol=OS.vol;const vi=$('[data-m=vol]',b);if(vi)vi.innerHTML=svg(OS.vol?P.vol:P.volOff,20)}saveOS();applyOS()});
   b.addEventListener('click',e=>{
     if(e.target.closest('[data-m=vol]')){if(OS.vol>0){OS._vol=OS.vol;OS.vol=0}else OS.vol=OS._vol||70;saveOS();applyOS();drawQS(b);return}
     const T=e.target.closest('[data-t]');
     if(T){
       const k=T.dataset.t;
-      if(k==='shot'){closeOS();toast('屏幕截图已保存到“下载内容”');return}
+      if(k==='shot'){closeOS();toast('此演示暂不支持保存屏幕截图，请使用宿主系统的截图工具');return}
       if(k==='wifi')OS.wifi=!OS.wifi;else if(k==='bt')OS.bt=!OS.bt;else if(k==='dnd')OS.dnd=!OS.dnd;else if(k==='dark')OS.dark=!isOsDark();else if(k==='night')OS.night=!OS.night;
       saveOS();applyOS();if(k==='dark')applySettings();drawQS(b);return;
     }
@@ -2984,8 +3012,8 @@ function statusBubble(t){
   placeAt=function(m,x,y,right){_pa(m,x,y,right);m.style.transformOrigin=right?'top right':'top left'};
   /* 补全 Chromium 常用快捷键 */
   document.addEventListener('keydown',e=>{
-    if(!win.open||win.min||document.body.classList.contains('locked')||e.defaultPrevented)return;
-    const c=e.ctrlKey||e.metaKey,k=(e.key||'').toLowerCase(),t=cur();if(!t)return;
+    if(composing(e)||!win.open||win.min||document.body.classList.contains('locked')||e.defaultPrevented)return;
+    const c=e.ctrlKey,k=(e.key||'').toLowerCase(),t=cur();if(!t)return;
     const eat=()=>{e.preventDefault();e.stopPropagation()};
     if((c&&e.shiftKey&&k==='r')||(c&&e.key==='F5')){eat();t.kind==='web'&&t.frame?reload(t):load(t,t.url)}
     else if(c&&e.shiftKey&&k==='w'){eat();closeWindow()}
@@ -3225,6 +3253,7 @@ function status(d){
   if(d.state==='prog'){const sp=d.speed||0;return (d.size?fmt(d.got)+' / '+fmt(d.size)+(sp>0?' · 还剩 '+eta((d.size-d.got)/sp):''):fmt(d.got)+(sp?' · '+fmt(sp)+'/秒':''))}
   if(d.state==='pause')return '已暂停 · '+fmt(d.got)+(d.size?' / '+fmt(d.size):'');
   if(d.state==='done')return (fmt(d.size||d.got)?fmt(d.size||d.got)+' · ':'')+h;
+  if(d.state==='external')return '已交由宿主浏览器下载（状态未知）';
   if(d.state==='canc')return '已取消';
   if(d.state==='gone')return '文件已被删除';
   return '失败 — '+(d.msg||'网络错误');
@@ -3284,9 +3313,9 @@ function act(e,root){
   else if(a==='cancel'){d.state='canc';live[d.id]&&(live[d.id].ctl.abort(),live[d.id].go&&live[d.id].go());delete live[d.id]}
   else if(a==='remove'){if(d.blob)try{URL.revokeObjectURL(d.blob)}catch(e){}DL=DL.filter(x=>x!==d)}
   else if(a==='retry'){DL=DL.filter(x=>x!==d);start(d.url,d.name)}
-  else if(a==='show'){toast('已在文件夹中显示：我的文件/下载/'+d.name)}
+  else if(a==='show'){toast('此演示无法打开宿主文件夹，请在宿主浏览器中查看下载内容')}
   else if(a==='open'){if(d.blob)window.open(d.blob,'_blank');else if(d.state==='done')toast('无法打开文件：已被移动或删除');}
-  else if(a==='more'){const r=b.getBoundingClientRect();showMenu([{label:'打开',fn:()=>d.blob?window.open(d.blob,'_blank'):toast('无法打开文件')},{label:'在文件夹中显示',fn:()=>toast('已在文件夹中显示：我的文件/下载/'+d.name)},{label:'复制下载链接',fn:()=>{navigator.clipboard&&navigator.clipboard.writeText(d.url).catch(()=>{});toast('已复制链接')}},'-',{label:'从列表中删除',fn:()=>{if(d.blob)try{URL.revokeObjectURL(d.blob)}catch(e){}DL=DL.filter(x=>x!==d);save();render()}}],r.right,r.bottom+2,{right:true});return}
+  else if(a==='more'){const r=b.getBoundingClientRect();showMenu([{label:'打开',fn:()=>d.blob?window.open(d.blob,'_blank'):toast('无法打开文件')},{label:'在文件夹中显示',fn:()=>toast('此演示无法打开宿主文件夹，请在宿主浏览器中查看下载内容')},{label:'复制下载链接',fn:()=>{navigator.clipboard&&navigator.clipboard.writeText(d.url).catch(()=>{});toast('已复制链接')}},'-',{label:'从列表中删除',fn:()=>{if(d.blob)try{URL.revokeObjectURL(d.blob)}catch(e){}DL=DL.filter(x=>x!==d);save();render()}}],r.right,r.bottom+2,{right:true});return}
   save();render();
 }
 /* ---------- chrome://downloads ---------- */
@@ -3324,6 +3353,7 @@ async function start(url,name){
     const cd=r.headers.get('content-disposition');const m=cd&&/filename\*?=(?:UTF-8'')?"?([^";]+)/i.exec(cd);if(m)try{d.name=decodeURIComponent(m[1])}catch(e){}
     const rd=r.body.getReader(),chunks=[];
     for(;;){if(L.gate&&d.state==='pause')await L.gate;const {done,value}=await rd.read();if(done)break;chunks.push(value);d.got+=value.length;if(!d.size||d.got>d.size)d.size=0}
+    if(d.state==='canc')throw new DOMException('Download cancelled','AbortError');
     const type=r.headers.get('content-type')||'application/octet-stream';
     d.size=d.got;d.blob=URL.createObjectURL(new Blob(chunks,{type}));
     saveToHost(d.blob,d.name);
@@ -3331,11 +3361,11 @@ async function start(url,name){
     if(d.state==='canc'){clearInterval(tick);render();return}
     if(err&&err.name==='AbortError'){clearInterval(tick);return}
     /* 跨域受限：交给宿主浏览器接管下载 */
-    if(err instanceof TypeError){
-      d.size=0;
-      for(let i=0;i<8&&d.state!=='canc';i++){await new Promise(r=>setTimeout(r,180));if(d.state==='pause'){i--;continue}d.got+=Math.round(40000+Math.random()*90000)}
-      if(d.state==='canc'){clearInterval(tick);render();return}
-      saveToHost(url,d.name,true);d.size=d.got;
+    if(err instanceof TypeError&&netOn()){
+      /* 无法观测宿主的下载结果，不得伪造字节数、进度或完成状态。 */
+      d.size=0;d.got=0;d.speed=0;d.state='external';
+      clearInterval(tick);delete live[d.id];save();render();
+      saveToHost(url,d.name,true);return;
     }else{d.state='fail';clearInterval(tick);delete live[d.id];save();render();return}
   }
   clearInterval(tick);delete live[d.id];d.state='done';d.speed=0;save();render();
@@ -3362,8 +3392,8 @@ render();
     try{
       if(k==='settings'){S=freshS(store.get('settings',{}));applySettings()}
       else if(k==='os'){Object.assign(OS,store.get('os',{}));applyOS();applySettings()}
-      else if(EMB&&k==='bm'){BM=store.get('bm',BM);onDataChange()}
-      else if(EMB&&k==='hist'&&!INC){HIST=store.get('hist',HIST)}
+      else if(k==='bm'){const bm=store.get('bm',BM);if(isRecord(bm)&&validBmList(bm.bar)&&validBmList(bm.other)){BM=bm;onDataChange()}}
+      else if(k==='hist'&&!INC){HIST=historyList(store.get('hist',[]));onDataChange()}
     }catch(_){}
   });
 })();
@@ -3494,7 +3524,7 @@ render();
   document.addEventListener('pointerdown',()=>post('focus'),true);
   addEventListener('focus',()=>post('focus'));
   document.addEventListener('keydown',e=>{
-    let a=null;const c=e.ctrlKey||e.metaKey;
+    let a=null;const c=e.ctrlKey;
     if(e.altKey&&!c&&e.shiftKey&&e.code==='Backquote')a='cycleprev';
     else if(e.altKey&&!c&&!e.shiftKey){
       if(e.code==='BracketLeft')a='snapl';else if(e.code==='BracketRight')a='snapr';
@@ -3516,6 +3546,8 @@ render();
   const byId=id=>wins.find(w=>w.id===id);
   const H=()=>innerHeight-48;
   const clone=b=>({x:b.x,y:b.y,w:b.w,h:b.h});
+  const validBounds=b=>isRecord(b)&&['x','y','w','h'].every(k=>Number.isFinite(b[k]))&&b.w>0&&b.h>0;
+  const savedWindow=w=>isRecord(w)&&typeof w.id==='string'&&!!w.id&&validBounds(w.b);
   const order=()=>[...wins].sort((a,b)=>b.z-a.z);
   const reduce=()=>matchMedia('(prefers-reduced-motion:reduce)').matches;
   const defB=()=>({x:Math.round(innerWidth*.08),y:Math.round(innerHeight*.04),w:Math.round(innerWidth*.84),h:Math.round(H()*.92)});
@@ -3566,7 +3598,7 @@ render();
   function create(o){
     o=o||{};
     const w={id:o.id||uid(),inc:!!o.inc,max:false,min:false,fs:false,snap:null,ready:false,pending:o.tabs||null,url:o.url||null,mode:o.mode||'new',
-      title:'新标签页',n:1,tabs:[],z:0,b:null,rb:o.rb?clone(o.rb):null,seq:++seq};
+      title:'新标签页',n:1,tabs:[],z:0,b:null,rb:validBounds(o.rb)?clone(o.rb):null,seq:++seq};
     const base=byId(focus)||order()[0];
     if(o.b){w.b=clampB(clone(o.b));w.max=!!o.max}
     else if(base){
@@ -3611,7 +3643,7 @@ render();
   }
   function openApp0(){
     const lw=store.get('lastwin',null);
-    if(S.startup==='continue'&&lw&&!byId(lw.id)){store.set('lastwin',null);return create({id:lw.id,b:lw.b,max:lw.max,rb:lw.rb,mode:'startup'})}
+    if(S.startup==='continue'&&savedWindow(lw)&&!byId(lw.id)){store.set('lastwin',null);return create({id:lw.id,b:lw.b,max:lw.max,rb:lw.rb,mode:'startup'})}
     return create({mode:'startup',max:true});
   }
 
@@ -3907,6 +3939,7 @@ render();
       case 'focus':closeOS();closePopups();if(focus!==w.id&&!ov)focusWin(w,true);break;
       case 'meta':
         w.title=m.title||'新标签页';w.n=m.n||1;w.tabs=m.tabs||[];
+        w.ifr.title=(w.inc?'无痕窗口：':'浏览器窗口：')+w.title;
         if(focus===w.id)document.title=(w.inc?'(无痕) ':'')+w.title+' - Iridium';
         broadcast();if(ov)ovLayout();break;
       case 'min':minimize(w);break;
@@ -3918,12 +3951,14 @@ render();
       case 'cycleprev':cycle(true);break;
       case 'overview':toggleOv();break;
       case 'osset':openOsSettings(m.sec);break;
+      case 'lock':lockScreen();break;
+      case 'quicksettings':if(!document.body.classList.contains('locked')&&!$('#poff'))toggleQS();break;
       case 'fs':setFs(w,m.on);break;
       case 'newwin':{
         const o={mode:'new',inc:!!m.inc,url:m.url||null};
         if(m.tabs){o.tabs=m.tabs;o.inc=w.inc}
         create(o);break}
-      case 'movetab':{const t2=byId(m.to);if(t2){send(t2,'adopt',{tabs:[m.tab]});focusWin(t2)}break}
+      case 'movetab':{const t2=byId(m.to);if(t2&&!t2.closing&&t2.inc===w.inc){send(t2,'adopt',{tabs:[m.tab]});focusWin(t2)}break}
       case 'dragstart':beginDrag(w,m);break;
       case 'tabout':tabOut(w,m);break;
       case 'dragmove':if(D&&D.kind==='move')dragAt(m.sx+D.ofx,m.sy+D.ofy,m.b);break;
@@ -3989,7 +4024,7 @@ render();
   document.addEventListener('keydown',e=>{
     if(document.body.classList.contains('locked')||$('#poff'))return;
     if(e.key==='Escape'&&ov){exitOv();return}
-    const c=e.ctrlKey||e.metaKey,k=(e.key||'').toLowerCase(),fw=byId(focus);
+    const c=e.ctrlKey,k=(e.key||'').toLowerCase(),fw=byId(focus);
     if(c&&!e.altKey&&!e.shiftKey&&k==='n'){e.preventDefault();WM.newWindow(false)}
     else if(c&&!e.altKey&&e.shiftKey&&k==='n'){e.preventDefault();WM.newWindow(true)}
     else if(c&&e.altKey&&e.code==='KeyW'){e.preventDefault();toggleOv()}
@@ -4019,8 +4054,9 @@ render();
       if(!p.has('incognito'))clean(new Set());
       create({inc:p.has('incognito'),url:p.get('u'),mode:'new',max:true});
     }else if(S.startup==='continue'){
-      let list=store.get('wins',[]);
-      if(!list.length){const lw=store.get('lastwin',null);if(lw){list=[lw];store.set('lastwin',null)}}
+      const saved=store.get('wins',[]);
+      let list=Array.isArray(saved)?saved.filter((w,i,a)=>savedWindow(w)&&a.findIndex(x=>isRecord(x)&&x.id===w.id)===i):[];
+      if(!list.length){const lw=store.get('lastwin',null);if(savedWindow(lw)){list=[lw];store.set('lastwin',null)}}
       clean(new Set(list.map(x=>x.id)));
       if(list.length){list.forEach(o=>create({id:o.id,b:o.b,max:o.max,rb:o.rb,mode:'startup',noFocus:true}));focusWin(wins[wins.length-1],true)}
       else create({mode:'startup',max:true});
