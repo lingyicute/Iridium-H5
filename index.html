@@ -1957,8 +1957,9 @@ function editBookmark(node,init={}){
   }}]);
 }
 function findIn(folder,id){let r=false;walk(folder.children,n=>{if(n.id===id)r=true});return r}
+const canBookmark=t=>!!(t&&t.url&&!isNtpUrl(t.url)&&t.kind!=='error');
 function bookmarkBubble(t){
-  if(!t||!t.url||isNtpUrl(t.url)||t.kind==='error')return;
+  if(!canBookmark(t))return;
   let n=findByUrl(t.url);if(!n){n={id:uid(),type:'url',title:t.title,url:t.url};BM.bar.push(n);saveBM()}
   const b=el(`<div><h3>${'已添加书签'}</h3><label class="fld"><span>名称</span><input id="bbn" value="${esc(n.title)}"></label><label class="fld"><span>文件夹</span><select id="bbf">${folderOptions(parentOf(n.id))}</select></label><div class="brow"><button class="btn" id="bbr">移除</button><button class="btn pri" id="bbd">完成</button></div></div>`);
   showBubble(b,$('#star'),'star');
@@ -1968,7 +1969,7 @@ function bookmarkBubble(t){
   $('#bbn',b).addEventListener('keydown',e=>{if(!composing(e)&&e.key==='Enter')$('#bbd',b).click()});
   $('#bbn',b).focus();$('#bbn',b).select();
 }
-toggler($('#star'),'star',()=>{const t=cur();if(t&&t.url&&!isNtpUrl(t.url)&&t.kind!=='error')bookmarkBubble(t)});
+toggler($('#star'),'star',()=>{const t=cur();if(canBookmark(t))bookmarkBubble(t)});
 function onDataChange(){
   renderBmBar();updateUI();
   tabs.forEach(t=>{if(t.redraw)try{t.redraw()}catch(e){}});
@@ -2013,7 +2014,7 @@ function mainMenu(){
     {label:'密码和自动填充',icon:ic(P.keyp),sub:[{label:'密码管理工具',fn:()=>openInternal('chrome://password-manager/')},{label:'付款方式',fn:soon('付款方式')},{label:'地址和其他信息',fn:soon('地址')}]},
     {label:'历史记录',icon:ic(P.history),sub:()=>[{label:'历史记录',key:'Ctrl+H',fn:()=>openInternal('chrome://history/')},'-',{label:'最近关闭',disabled:true},...closedStack.slice(-4).reverse().map((c,i)=>({label:c.title||c.url,icon:fav(c.url,16),fn:()=>{closedStack.splice(closedStack.length-1-i,1);newTab(c.url,{pinned:c.pinned})}})),'-',...recent]},
     {label:'下载内容',icon:ic(P.dl),key:'Ctrl+J',fn:()=>openInternal('chrome://downloads/')},
-    {label:'书签和列表',icon:ic(P.star),sub:()=>[{label:'为此标签页添加书签…',key:'Ctrl+D',fn:()=>bookmarkBubble(cur())},{label:'显示书签栏',checked:S.showBm,key:'Ctrl+Shift+B',fn:()=>{S.showBm=!S.showBm;saveS();applySettings()}},{label:'书签管理器',key:'Ctrl+Shift+O',fn:()=>openInternal('chrome://bookmarks/')},'-',...bmMenuItems(BM.bar),...(BM.other.length?['-',{label:'其他书签',icon:svg(P.folder,16),sub:()=>bmMenuItems(BM.other)}]:[])]},
+    {label:'书签和列表',icon:ic(P.star),sub:()=>[{label:'为此标签页添加书签…',key:'Ctrl+D',disabled:!canBookmark(t),fn:()=>bookmarkBubble(cur())},{label:'显示书签栏',checked:S.showBm,key:'Ctrl+Shift+B',fn:()=>{S.showBm=!S.showBm;saveS();applySettings()}},{label:'书签管理器',key:'Ctrl+Shift+O',fn:()=>openInternal('chrome://bookmarks/')},'-',...bmMenuItems(BM.bar),...(BM.other.length?['-',{label:'其他书签',icon:svg(P.folder,16),sub:()=>bmMenuItems(BM.other)}]:[])]},
     {label:'标签页组',icon:ic('M5 4h14c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm0 6v8h14v-8H5zM5 6v2h5V6H5z'),sub:()=>[{label:'新建标签页组',icon:ic(P.add),fn:()=>newGroup(cur())},...(Object.keys(groups).length?['-',...Object.values(groups).map(g=>({label:g.name||'未命名群组',icon:`<span class="gdot" style="background:${GCOL[g.color]};margin:4px"></span>`,fn:()=>{const m=groupMembers(g.id);if(g.collapsed)toggleGroup(g);if(m[0])activate(m[0])}}))]:[])]},
     {label:'扩展程序',icon:ic(P.puzzle),sub:[{label:'管理扩展程序',fn:()=>openInternal('chrome://extensions/')},{label:'实验功能',fn:()=>openInternal('chrome://flags/')}]},
     {label:'删除浏览数据…',icon:ic(P.del),key:'Ctrl+Shift+Del',fn:clearDataDialog},
@@ -2586,7 +2587,7 @@ document.addEventListener('keydown',e=>{
   else if(c&&!e.shiftKey&&k==='n'){stop();newWindow()}
   else if((c&&!e.shiftKey&&k==='l')||(e.altKey&&!c&&!e.shiftKey&&k==='d')||e.key==='F6'){stop();focusOmni()}
   else if((c&&!e.shiftKey&&k==='r')||(!c&&e.key==='F5')){stop();reload(t)}
-  else if(c&&!e.shiftKey&&k==='d'){stop();if(t&&t.url&&!isNtpUrl(t.url)&&t.kind!=='error')bookmarkBubble(t)}
+  else if(c&&!e.shiftKey&&k==='d'){stop();if(canBookmark(t))bookmarkBubble(t)}
   else if(c&&!e.shiftKey&&k==='h'){stop();openInternal('chrome://history/')}
   else if(c&&!e.shiftKey&&k==='j'){stop();openInternal('chrome://downloads/')}
   else if(c&&e.shiftKey&&k==='o'){stop();openInternal('chrome://bookmarks/')}

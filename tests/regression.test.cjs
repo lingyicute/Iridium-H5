@@ -480,3 +480,21 @@ test('tab hover cards still use the thumbnail and memory implementation', async 
   assert.match(await frame.evaluate(() => document.querySelector('#hcard .hcm').textContent), /内存用量/);
   assert.equal(await frame.evaluate(() => typeof showHC), 'function');
 });
+
+test('the main menu disables Add bookmark on the new tab and error pages', async t => {
+  const { frame } = await desktop(t);
+  const item = () => frame.evaluate(() => {
+    mainMenu();
+    const mi = [...document.querySelectorAll('.menu .mi')].find(x => x._it && x._it.label === '书签和列表');
+    const sub = mi._it.sub().find(x => x.label === '为此标签页添加书签…');
+    closePopups();
+    return !!sub.disabled;
+  });
+  assert.equal(await item(), true);
+  await frame.evaluate(() => go(activeTab, 'foo://bar'));
+  assert.equal(await item(), true);
+  await frame.evaluate(() => go(activeTab, 'chrome://version/'));
+  assert.equal(await item(), false);
+  await frame.evaluate(() => go(activeTab, 'chrome://newtab/'));
+  assert.equal(await item(), true);
+});
