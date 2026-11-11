@@ -384,3 +384,18 @@ test('protocol-only omnibox input is searched instead of loading an empty URL', 
   assert.deepEqual(out.good, ['https://example.com/', 'file:///tmp/a.html', 'data:,hi', 'javascript:void(0)', 'view-source:chrome://version']);
   assert.deepEqual(out.like, [false, false, true]);
 });
+
+test('unsupported schemes show ERR_UNKNOWN_URL_SCHEME and malformed URLs keep ERR_INVALID_URL', async t => {
+  const { frame } = await desktop(t);
+  const read = () => frame.evaluate(() => ({ kind: activeTab.kind, code: (activeTab.view.querySelector('.ecode') || {}).textContent, text: activeTab.view.textContent }));
+  await frame.evaluate(() => go(activeTab, 'foo://bar'));
+  let r = await read();
+  assert.equal(r.kind, 'error');
+  assert.equal(r.code, 'ERR_UNKNOWN_URL_SCHEME');
+  assert.match(r.text, /foo:/);
+  await frame.evaluate(() => go(activeTab, 'javascript:void(0)'));
+  assert.equal((await read()).code, 'ERR_UNKNOWN_URL_SCHEME');
+  await frame.evaluate(() => load(activeTab, 'not a url'));
+  r = await read();
+  assert.equal(r.code, 'ERR_INVALID_URL');
+});
