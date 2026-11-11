@@ -2115,7 +2115,33 @@ function doFind(back){
       if(!ok)try{getSelection().removeAllRanges()}catch(_){}
     }
   }catch(e){ok=false}
-  $('#findcnt').textContent=ok?'':'0/0';
+  const st=findStats(t,q),fc=$('#findcnt');
+  if(ok)fc.textContent=st&&st.total?(st.idx<0?1:st.idx+1)+'/'+st.total:'';
+  else if(st)fc.textContent='0/0';
+  else if(t.kind==='web')fc.textContent='不可用';/* 沙箱网页无法访问，不能谎报 0/0 */
+  else fc.textContent='0/0';
+}
+/* 统计可见文本中的匹配数及当前选区对应的序号；无法访问文档（跨源/沙箱网页）时返回 null */
+function findStats(t,q){
+  let doc=null,win=null,root=null;
+  if(t.kind==='web'){try{doc=t.frame&&t.frame.contentDocument;win=doc&&t.frame.contentWindow;root=doc&&doc.body}catch(_){doc=null}}
+  else{doc=document;win=window;root=t.view}
+  if(!doc||!win||!root)return null;
+  const ql=q.toLowerCase();let rng=null;
+  try{const s=win.getSelection();if(s&&s.rangeCount)rng=s.getRangeAt(0)}catch(_){}
+  let total=0,idx=-1;
+  const w=doc.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;
+  while((n=w.nextNode())){
+    const v=n.nodeValue;if(!v)continue;
+    const pe=n.parentElement;
+    if(!pe||/^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE)$/i.test(pe.tagName)||(pe.checkVisibility&&!pe.checkVisibility()))continue;
+    const lv=v.toLowerCase();
+    for(let p=lv.indexOf(ql);p>=0;p=lv.indexOf(ql,p+ql.length)){
+      if(idx<0&&rng){try{if(rng.comparePoint(n,p)>=0)idx=total}catch(_){}}
+      total++;
+    }
+  }
+  return {total,idx};
 }
 $('#findup').innerHTML=svg(P.up,18);$('#finddn').innerHTML=svg(P.down,18);$('#findx').innerHTML=svg(P.close,16);
 $('#findin').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();doFind(e.shiftKey)}if(e.key==='Escape'){e.preventDefault();closeFind()}});

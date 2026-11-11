@@ -430,3 +430,43 @@ test('the All Bookmarks entry is hidden while Other Bookmarks is empty', async t
   await frame.evaluate(() => { BM.other.length = 0; saveBM(); });
   assert.equal((await state()).hidden, true);
 });
+
+test('find bar shows the current match position and total like Chrome', async t => {
+  const { frame } = await desktop(t);
+  await frame.evaluate(() => go(activeTab, 'chrome://about/'));
+  const total = await frame.evaluate(() => (activeTab.view.innerText.toLowerCase().match(/chrome:\/\//g) || []).length);
+  assert.ok(total > 10);
+  const cnt = () => frame.evaluate(() => document.querySelector('#findcnt').textContent);
+  await frame.evaluate(() => { openFind(); document.querySelector('#findin').value = 'CHROME://'; doFind(false); });
+  assert.equal(await cnt(), `1/${total}`);
+  const index = async () => { const m = (await cnt()).match(/^(\d+)\/(\d+)$/); assert.ok(m && +m[2] === total, 'count format'); return +m[1]; };
+  // 输入框保持焦点时，Enter 是否立刻前进取决于宿主选区实现；最多按 4 次，必须前进，且 Shift+Enter 回退一项。
+  const seen = [await index()];
+  for (let i = 0; i < 4 && seen[seen.length - 1] < 2; i++) {
+    await key(frame, { key: 'Enter', code: 'Enter' }, '#findin');
+    seen.push(await index());
+  }
+  const forward = seen[seen.length - 1];
+  assert.ok(forward >= 2, 'indices=' + seen.join(','));
+  await key(frame, { key: 'Enter', code: 'Enter', shiftKey: true }, '#findin');
+  assert.equal(await index(), forward - 1, 'indices=' + seen.join(','));
+  await frame.evaluate(() => { document.querySelector('#findin').value = 'no-such-text-xyz'; doFind(false); });
+  assert.equal(await cnt(), '0/0');
+});
+
+test('find bar ignores hidden text and does not claim 0/0 for sandboxed web pages', async t => {
+  const { frame } = await desktop(t);
+  await frame.evaluate(() => {
+    const d = document.createElement('div');
+    d.innerHTML = '<p>needle</p><p hidden>needle needle</p><p style="display:none">needle</p><script>needle</script>';
+    activeTab.view.append(d);
+    openFind(); document.querySelector('#findin').value = 'needle'; doFind(false);
+  });
+  assert.equal(await frame.evaluate(() => document.querySelector('#findcnt').textContent), '1/1');
+  await frame.evaluate(() => { activeTab.view.lastChild.innerHTML = '<p>needle</p><p>x needle</p><p hidden>needle</p>'; doFind(false); });
+  assert.equal(await frame.evaluate(() => document.querySelector('#findcnt').textContent), '1/2');
+  await frame.evaluate(base => { go(activeTab, base + '/fixture'); }, base);
+  await frame.waitForFunction(() => activeTab.kind === 'web' && !activeTab.loading);
+  await frame.evaluate(() => { document.querySelector('#findin').value = 'probe'; doFind(false); });
+  assert.equal(await frame.evaluate(() => document.querySelector('#findcnt').textContent), '不可用');
+});
