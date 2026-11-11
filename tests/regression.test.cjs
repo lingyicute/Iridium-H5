@@ -6,10 +6,24 @@ const { join } = require('node:path');
 const { chromium } = require('playwright');
 
 let server, browser, base;
+const slow = { opened: 0, completed: 0, closed: 0 };
 before(async () => {
   const html = await readFile(process.env.IRIDIUM_HTML || join(__dirname, '..', 'index.html'));
   server = createServer((req, res) => {
     res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    if (req.url.startsWith('/slow.zip')) {
+      res.setHeader('Content-Type', 'application/zip');
+      res.setHeader('Content-Length', String(80 * 512));
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      slow.opened++;
+      let sent = 0;
+      const timer = setInterval(() => {
+        if (sent >= 80) { clearInterval(timer); slow.completed++; res.end(); return; }
+        sent++; res.write(Buffer.alloc(512));
+      }, 40);
+      res.on('close', () => { clearInterval(timer); slow.closed++; });
+      return;
+    }
     if (req.url.startsWith('/fixture')) {
       res.end(`<body>probe<script>try { top.document.body.dataset.compromised = 'yes'; top.localStorage.setItem('probe', 'yes'); document.body.dataset.result = 'escaped'; } catch (_) { document.body.dataset.result = 'blocked'; }<\/script>`);
     } else res.end(html);
@@ -250,4 +264,111 @@ test('active-tab selection is persisted and survives an actual desktop reload', 
   await page.waitForFunction(() => WM.wins.length === 1 && WM.wins[0].ready);
   const restored = page.frames().find(f => f.url().includes('?embed=1'));
   await restored.waitForFunction(() => activeTab && activeTab.url === 'chrome://version/');
+});
+
+test('Escape cancels an in-strip tab drag and keeps the original tab order', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.evaluate(() => { newTab('chrome://version/'); newTab('chrome://bookmarks/'); });
+  const before = await frame.evaluate(() => tabs.map(x => x.id));
+  const first = await frame.locator('.tab').first().boundingBox();
+  const last = await frame.locator('.tab').last().boundingBox();
+  const y = first.y + first.height / 2;
+  await page.mouse.move(first.x + first.width / 2, y);
+  await page.mouse.down();
+  for (let i = 1; i <= 12; i++) await page.mouse.move(first.x + first.width / 2 + (last.x - first.x) * i / 12, y);
+  assert.equal(await frame.locator('.tab.drag').count(), 1);
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  assert.deepEqual(await frame.evaluate(() => tabs.map(x => x.id)), before);
+  assert.deepEqual(await frame.evaluate(() => [...document.querySelectorAll('#tabs .tab')].map(x => x.dataset.id)), before);
+  assert.equal(await frame.locator('.tab.drag').count(), 0);
+  assert.equal(await frame.evaluate(() => document.getElementById('content').style.pointerEvents), '');
+});
+
+test('Escape cancels a window drag and restores the maximized window', async t => {
+  const { page, frame } = await desktop(t);
+  assert.equal(await page.evaluate(() => WM.wins[0].max), true);
+  const spacer = await frame.locator('#spacer').boundingBox();
+  const x = spacer.x + spacer.width / 2, y = spacer.y + spacer.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(x - 12 * i, y + 20 * i);
+  assert.equal(await page.evaluate(() => WM.wins[0].max), false, 'drag should have started');
+  await page.keyboard.press('Escape');
+  await page.mouse.up();
+  await page.waitForFunction(() => WM.wins[0].max === true);
+  assert.deepEqual(await page.evaluate(() => ({ max: WM.wins[0].max, snap: WM.wins[0].snap || null })), { max: true, snap: null });
+  assert.equal(await page.evaluate(() => document.body.classList.contains('wdrag')), false);
+});
+
+test('an uncancelled window drag still moves the window', async t => {
+  const { page, frame } = await desktop(t);
+  const spacer = await frame.locator('#spacer').boundingBox();
+  const x = spacer.x + spacer.width / 2, y = spacer.y + spacer.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  for (let i = 1; i <= 10; i++) await page.mouse.move(x - 12 * i, y + 20 * i);
+  await page.mouse.up();
+  assert.equal(await page.evaluate(() => WM.wins[0].max), false);
+});
+
+test('bookmark bar items are keyboard reachable and operable', async t => {
+  const { page, frame } = await desktop(t);
+  const info = await frame.evaluate(() => ({ n: BM.bar.length, first: BM.bar[1] && BM.bar[1].url, focusable: [...document.querySelectorAll('#bmitems .bm, #bmother')].every(x => x.tabIndex === 0 && x.getAttribute('role') === 'button') }));
+  assert.ok(info.n >= 2 && info.focusable);
+  await key(frame, { key: 'B', code: 'KeyB', altKey: true, shiftKey: true });
+  const focused = () => frame.evaluate(() => document.activeElement && document.activeElement.dataset && document.activeElement.dataset.id);
+  const firstId = await focused();
+  assert.equal(firstId, await frame.evaluate(() => BM.bar[0].id));
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await focused(), await frame.evaluate(() => BM.bar[1].id));
+  await page.keyboard.press('ArrowLeft');
+  assert.equal(await focused(), firstId);
+  await page.keyboard.press('End');
+  assert.notEqual(await focused(), firstId);
+  await page.keyboard.press('Home');
+  assert.equal(await focused(), firstId);
+  if (info.first) {
+    await page.keyboard.press('ArrowRight');
+    await page.keyboard.press('Enter');
+    assert.equal(await frame.evaluate(() => activeTab.url.replace(/\/$/, '') === BM.bar[1].url.replace(/\/$/, '')), true);
+  }
+});
+
+test('the lock screen clock follows the real time', async t => {
+  const { page } = await desktop(t);
+  await page.evaluate(() => lockScreen());
+  await page.evaluate(() => { document.querySelector('#lock .tm').textContent = '99:99'; document.querySelector('#lock .lt>div:not(.tm)').textContent = 'stale'; renderStatus(); });
+  const out = await page.evaluate(() => ({ tm: document.querySelector('#lock .tm').textContent, d: document.querySelector('#lock .lt>div:not(.tm)').textContent, now: hhmm() }));
+  assert.equal(out.tm, out.now);
+  assert.notEqual(out.d, 'stale');
+});
+
+test('removing an in-progress download aborts it instead of saving it later', async t => {
+  const { page, frame } = await desktop(t);
+  const downloads = [];
+  page.on('download', d => downloads.push(d));
+  const o0 = slow.opened, c0 = slow.closed, f0 = slow.completed;
+  await frame.evaluate(u => { iridiumDownload(u); }, base + '/slow.zip');
+  await frame.evaluate(() => openInternal('chrome://downloads/'));
+  const rm = frame.locator('.dlrow [data-a="remove"]');
+  await rm.waitFor();
+  await page.waitForTimeout(250);
+  await rm.click();
+  await page.waitForTimeout(500);
+  assert.equal(slow.opened - o0, 1);
+  assert.equal(slow.completed - f0, 0, 'server must not finish streaming to an abandoned download');
+  assert.equal(slow.closed - c0, 1);
+  assert.equal(downloads.length, 0);
+  assert.equal(await frame.evaluate(() => document.querySelectorAll('.dlrow').length), 0);
+});
+
+test('minimizing a fullscreen window leaves host fullscreen and the window fullscreen flag', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.evaluate(() => IWM.post('fs', { on: true }));
+  await page.waitForFunction(() => WM.wins[0].fs === true);
+  await frame.evaluate(() => IWM.post('min'));
+  await page.waitForFunction(() => WM.wins[0].min === true);
+  assert.equal(await page.evaluate(() => WM.wins[0].fs), false);
+  await page.waitForFunction(() => !document.fullscreenElement);
 });

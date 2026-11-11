@@ -1576,9 +1576,10 @@ function startDrag(e,te){
   let sx=e.clientX;const sx0=sx,sy0=e.clientY,t0=byId(te.dataset.id),pin0=!!(t0&&t0.pinned);let moved=false;
   const live=()=>[...tabsEl.children].filter(x=>x.classList.contains('tab')&&!x.classList.contains('closing')&&!x.classList.contains('gcol')&&x.classList.contains('pinned')===pin0);
   const clamp=d=>Math.max(-te.offsetLeft,Math.min(d,tabsEl.clientWidth-te.offsetWidth-te.offsetLeft));
+  const off=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);document.removeEventListener('keydown',esc,true);content.style.pointerEvents=''};
   const mm=ev=>{
     if(!moved){if(Math.hypot(ev.clientX-sx0,ev.clientY-sy0)<5)return;moved=true;te.style.transition='none';te.classList.add('drag');content.style.pointerEvents='none'}
-    if(EMB&&IWM.tryDetach(ev,te,mm,mu))return;
+    if(EMB&&IWM.tryDetach(ev,te,mm,mu)){off();return}
     const sibs=live().filter(x=>x!==te);
     let dx=clamp(ev.clientX-sx);te.style.transform=`translateX(${dx}px)`;
     const cx=te.offsetLeft+dx+te.offsetWidth/2;
@@ -1591,7 +1592,7 @@ function startDrag(e,te){
     }
   };
   const mu=()=>{
-    document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);content.style.pointerEvents='';
+    off();
     if(moved){
       te.style.transition='transform .18s cubic-bezier(.2,0,0,1)';te.style.transform='';
       setTimeout(()=>{te.classList.remove('drag');te.style.transition=''},190);
@@ -1599,7 +1600,12 @@ function startDrag(e,te){
       tabs=[...tabsEl.children].map(x=>byId(x.dataset.id)).filter(Boolean);regroupAfterDrag(te);renderGroups();saveSession();
     }else{te.style.transform='';te.classList.remove('drag')}
   };
-  document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
+  const esc=ev=>{
+    if(ev.key!=='Escape'||!moved)return;ev.preventDefault();ev.stopImmediatePropagation();off();
+    $$('.tab',tabsEl).forEach(x=>{clearTimeout(x._ft);x.style.transition='';x.style.transform='';x.classList.remove('drag')});
+    renderTabs();
+  };
+  document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);document.addEventListener('keydown',esc,true);
 }
 /* 标签页悬停卡片 */
 function tabCls(d){const w=d.offsetWidth;d.classList.toggle('c1',w<=108);d.classList.toggle('c2',w<=76);d.classList.toggle('c3',w<=62)}
@@ -1845,11 +1851,11 @@ function renderBmBar(){
   const box=$('#bmitems');if(!box)return;
   box.innerHTML='';
   BM.bar.forEach(n=>{
-    const d=el(`<div class="bm" data-id="${n.id}" title="${esc(n.title)}${n.url?'\n'+esc(n.url):''}">${n.type==='folder'?svg(P.folder,16):fav(n.url,16)}<span>${esc(n.title)}</span></div>`);
+    const d=el(`<div class="bm" data-id="${n.id}" tabindex="0" role="button"${n.type==='folder'?' aria-haspopup="menu"':''} title="${esc(n.title)}${n.url?'\n'+esc(n.url):''}">${n.type==='folder'?svg(P.folder,16):fav(n.url,16)}<span>${esc(n.title)}</span></div>`);
     box.append(d);
   });
-  const o=$('#bmother');o.hidden=false;o.innerHTML=svg(P.folder,16)+'<span>所有书签</span>';o.dataset.id='other';
-  $('#bmover').innerHTML=svg(P.chev,16);
+  const o=$('#bmother');o.hidden=false;o.tabIndex=0;o.setAttribute('role','button');o.setAttribute('aria-haspopup','menu');o.innerHTML=svg(P.folder,16)+'<span>所有书签</span>';o.dataset.id='other';
+  $('#bmover').innerHTML=svg(P.chev,16);$('#bmover').setAttribute('aria-label','显示已隐藏的书签');
   requestAnimationFrame(layoutBm);
 }
 let bmHidden=[];
@@ -1925,6 +1931,15 @@ $('#bmbar').addEventListener('click',e=>{
   const n=findNode(id);if(!n)return;
   if(n.type==='folder'){const was=wasOwner;wasOwner='';if(e.detail>0&&was==='bm'+id)return;const r=b.getBoundingClientRect();showMenu(bmMenuItems(n.children),r.left,r.bottom+2,{owner:'bm'+id})}
   else if(e.ctrlKey||e.metaKey)newTab(n.url,{bg:true,afterActive:true});else go(cur(),n.url);
+});
+$('#bmbar').addEventListener('keydown',e=>{
+  const b=e.target.closest('.bm');if(!b)return;
+  if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();b.click();return}
+  if(!/^(ArrowLeft|ArrowRight|Home|End)$/.test(e.key))return;
+  const items=$$('.bm',$('#bmbar')).filter(x=>x.offsetParent!==null&&getComputedStyle(x).visibility!=='hidden');
+  if(!items.length)return;e.preventDefault();
+  const i=items.indexOf(b),j=e.key==='Home'?0:e.key==='End'?items.length-1:e.key==='ArrowRight'?(i+1)%items.length:(i-1+items.length)%items.length;
+  items[j].focus();
 });
 $('#bmbar').addEventListener('auxclick',e=>{const b=e.target.closest('.bm');if(b&&e.button===1){const n=findNode(b.dataset.id);n&&n.type==='url'&&newTab(n.url,{bg:true,afterActive:true})}});
 $('#bmbar').addEventListener('contextmenu',e=>{
@@ -2636,6 +2651,7 @@ function renderStatus(){
   const wf=netOn();
   s.innerHTML=`<span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span>${OS.dnd?`<span style="display:flex">${svg(P.dnd,16)}</span>`:''}<span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span id="clock">${hhmm()}</span>`;
   s.title=dateStr()+' '+hhmm()+'\n电池电量 '+BAT.l+'%'+(BAT.c?'（正在充电）':'');
+  const lock=$('#lock');if(lock){$('.tm',lock).textContent=hhmm();$('.lt>div:not(.tm)',lock).textContent=dateStr()}
 }
 mq.addEventListener&&mq.addEventListener('change',()=>{if(OS.dark==null){applyOS();applySettings()}});
 setInterval(renderStatus,15000);
@@ -2724,7 +2740,7 @@ function drawQS(b){
 
 /* 锁屏 / 关机 */
 function lockScreen(signedOut){
-  closeOS();if($('#lock'))return;document.body.classList.add('locked');
+  closeOS();if($('#lock'))return;closePopups();hideSugg();hideHC();document.body.classList.add('locked');
   try{if(document.activeElement)document.activeElement.blur();window.focus()}catch(e){}
   const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lt"><div class="tm">${hhmm()}</div><div>${dateStr()}</div></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:18px">User</div><button class="btn pri" style="color:#fff">${signedOut?'点击或按 Enter 键登录':'点击或按 Enter 键解锁'}</button></div></div>`);
   document.body.append(d);$('button',d).focus();
@@ -3021,7 +3037,7 @@ function statusBubble(t){
     else if(c&&k==='k'&&!e.shiftKey){eat();focusOmni();urlIn.value='?';urlIn.setSelectionRange(1,1);refreshSugg()}
     else if(e.key==='F1'){eat();openInternal('chrome://settings/help')}
     else if(e.altKey&&e.shiftKey&&k==='t'){eat();const b=$('#back').disabled?$('#reload'):$('#back');b.focus()}
-    else if(e.altKey&&e.shiftKey&&k==='b'){eat();const b=$('#bmitems .bm');b&&b.focus()}
+    else if(e.altKey&&e.shiftKey&&k==='b'){eat();const b=$$('#bmbar .bm').find(x=>x.offsetParent!==null&&getComputedStyle(x).visibility!=='hidden');b&&b.focus()}
     else if(c&&e.shiftKey&&k==='d'){
       eat();const kids=tabs.filter(x=>/^https?:/i.test(x.url)).map(x=>({id:uid(),type:'url',title:x.title||x.url,url:x.url}));
       if(!kids.length){toast('没有可添加为书签的标签页');return}
@@ -3311,7 +3327,7 @@ function act(e,root){
   if(a==='pause'){d.state='pause';live[d.id]&&(live[d.id].gate=new Promise(r=>live[d.id].go=r));d.speed=0}
   else if(a==='resume'){d.state='prog';live[d.id]&&live[d.id].go&&live[d.id].go();d.lt=performance.now();d.lg=d.got}
   else if(a==='cancel'){d.state='canc';live[d.id]&&(live[d.id].ctl.abort(),live[d.id].go&&live[d.id].go());delete live[d.id]}
-  else if(a==='remove'){if(d.blob)try{URL.revokeObjectURL(d.blob)}catch(e){}DL=DL.filter(x=>x!==d)}
+  else if(a==='remove'){const L=live[d.id];if(L){d.state='canc';L.ctl.abort();L.go&&L.go();delete live[d.id]}if(d.blob)try{URL.revokeObjectURL(d.blob)}catch(e){}DL=DL.filter(x=>x!==d)}
   else if(a==='retry'){DL=DL.filter(x=>x!==d);start(d.url,d.name)}
   else if(a==='show'){toast('此演示无法打开宿主文件夹，请在宿主浏览器中查看下载内容')}
   else if(a==='open'){if(d.blob)window.open(d.blob,'_blank');else if(d.state==='done')toast('无法打开文件：已被移动或删除');}
@@ -3465,9 +3481,9 @@ render();
   function forward(){
     const mv=ev=>{if(ev.buttons===0){off();post('dragend',{sx:ev.screenX,sy:ev.screenY});return}post('dragmove',{sx:ev.screenX,sy:ev.screenY,b:ev.buttons})};
     const up=ev=>{off();post('dragend',{sx:ev.screenX,sy:ev.screenY})};
-    const bl=()=>{off();post('dragend',{sx:0,sy:0,cancel:true})};
-    const off=()=>{document.removeEventListener('mousemove',mv,true);document.removeEventListener('mouseup',up,true);removeEventListener('blur',bl)};
-    document.addEventListener('mousemove',mv,true);document.addEventListener('mouseup',up,true);addEventListener('blur',bl);
+    const cancel=ev=>{if(ev&&ev.type==='keydown'){if(ev.key!=='Escape')return;ev.preventDefault();ev.stopImmediatePropagation()}off();post('dragend',{sx:0,sy:0,cancel:true})};
+    const off=()=>{document.removeEventListener('mousemove',mv,true);document.removeEventListener('mouseup',up,true);document.removeEventListener('keydown',cancel,true);removeEventListener('blur',cancel)};
+    document.addEventListener('mousemove',mv,true);document.addEventListener('mouseup',up,true);document.addEventListener('keydown',cancel,true);addEventListener('blur',cancel);
   }
   $('#tabstrip').addEventListener('mousedown',e=>{
     if(e.button!==0||(e.target.id!=='tabstrip'&&e.target.id!=='spacer'))return;
@@ -3663,6 +3679,7 @@ render();
   }
   function minimize(w){
     if(w.min||w.closing||w._minning)return;
+    if(w.fs)setFs(w,false);
     closePopups();rmSB();
     const done=()=>{
       w._minning=false;
@@ -3756,7 +3773,7 @@ render();
   function beginDrag(w,m){
     if(w.fs||ov)return;
     const r=w.ifr.getBoundingClientRect(),px=r.left+m.cx,py=r.top+m.cy;
-    D={w:w,kind:'move',merge:!!m.merge,started:false,ofx:px-m.sx,ofy:py-m.sy,px0:px,py0:py,ox:0,oy:0,hover:null};
+    D={w:w,kind:'move',merge:!!m.merge,started:false,ofx:px-m.sx,ofy:py-m.sy,px0:px,py0:py,ox:0,oy:0,hover:null,home:{b:clone(w.b),max:w.max,snap:w.snap}};
     focusWin(w,true);
     if(m.immediate)startMove(px,py);
   }
@@ -3819,11 +3836,19 @@ render();
     if(tgt){const r=tgt.fr.getBoundingClientRect();send(tgt,'dropHover',{x:px-r.left})}
     snapHint(tgt?null:[px,py]);
   }
-  function dragEnd(px,py){
+  function dragEnd(px,py,cancel){
     if(!D)return;
     const d=D;D=null;
     shieldOff();document.body.classList.remove('wdrag');snapHint(null);
     const w=d.w;
+    if(cancel){
+      if(d.hover)send(d.hover,'dropLeave');
+      w.fr.classList.remove('merging');
+      if(d.kind==='resize'){w.b=clone(d.b0);place(w)}
+      else if(d.home){w.b=clone(d.home.b);w.max=d.home.max;w.snap=d.home.snap;place(w);pushAll()}
+      else{w.b=clampB(w.b);w.rb=clone(w.b);place(w)}
+      saveWins();return;
+    }
     if(d.kind==='resize'){w.b=clampB(w.b);w.rb=clone(w.b);place(w);saveWins();return}
     if(!d.started)return;
     if(d.hover&&wins.includes(d.hover)){mergeInto(w,d.hover,px-d.hover.fr.getBoundingClientRect().left);return}
@@ -3851,6 +3876,8 @@ render();
   }
   document.addEventListener('mousemove',e=>{if(D)dragAt(e.clientX,e.clientY,e.buttons)},true);
   document.addEventListener('mouseup',e=>{if(D)dragEnd(e.clientX,e.clientY)},true);
+  document.addEventListener('keydown',e=>{if(D&&e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();dragEnd(0,0,true)}},true);
+  addEventListener('blur',()=>{if(D)dragEnd(0,0,true)});
 
   /* ---------- 最大化悬停气泡 (贴靠布局) ---------- */
   function rmSB(){clearTimeout(sbT);$$('.snapbub').forEach(x=>x.remove())}
@@ -3962,7 +3989,7 @@ render();
       case 'dragstart':beginDrag(w,m);break;
       case 'tabout':tabOut(w,m);break;
       case 'dragmove':if(D&&D.kind==='move')dragAt(m.sx+D.ofx,m.sy+D.ofy,m.b);break;
-      case 'dragend':if(D&&D.kind==='move'){if(m.cancel&&D.hover){send(D.hover,'dropLeave');D.hover=null}dragEnd(m.cancel?D.w.b.x+D.ox:m.sx+D.ofx,m.cancel?D.w.b.y+D.oy:m.sy+D.ofy)}break;
+      case 'dragend':if(D&&D.kind==='move')dragEnd(m.sx+(D.ofx||0),m.sy+(D.ofy||0),!!m.cancel);break;
       case 'sbshow':showSB(w,m);break;
       case 'sbhide':clearTimeout(sbT);sbT=setTimeout(rmSB,250);break;
       case 'exported':{const f=reqs[m.req];if(f){delete reqs[m.req];f(m.tabs)}break}
