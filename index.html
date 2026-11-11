@@ -1854,7 +1854,7 @@ function renderBmBar(){
     const d=el(`<div class="bm" data-id="${n.id}" tabindex="0" role="button"${n.type==='folder'?' aria-haspopup="menu"':''} title="${esc(n.title)}${n.url?'\n'+esc(n.url):''}">${n.type==='folder'?svg(P.folder,16):fav(n.url,16)}<span>${esc(n.title)}</span></div>`);
     box.append(d);
   });
-  const o=$('#bmother');o.hidden=false;o.tabIndex=0;o.setAttribute('role','button');o.setAttribute('aria-haspopup','menu');o.innerHTML=svg(P.folder,16)+'<span>所有书签</span>';o.dataset.id='other';
+  const o=$('#bmother');o.hidden=!(Array.isArray(BM.other)&&BM.other.length);o.tabIndex=0;o.setAttribute('role','button');o.setAttribute('aria-haspopup','menu');o.innerHTML=svg(P.folder,16)+'<span>所有书签</span>';o.dataset.id='other';
   $('#bmover').innerHTML=svg(P.chev,16);$('#bmover').setAttribute('aria-label','显示已隐藏的书签');
   requestAnimationFrame(layoutBm);
 }
