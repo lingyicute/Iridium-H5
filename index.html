@@ -1630,7 +1630,7 @@ function saveSession(){if(INC||!tabs.length)return;store.set(SK,tabs.map(t=>({ur
 const BLOCKED=/(^|\.)(google\.[a-z.]+|youtube\.com|facebook\.com|instagram\.com|twitter\.com|x\.com|github\.com|linkedin\.com|reddit\.com|netflix\.com|amazon\.[a-z.]+|paypal\.com|tiktok\.com|discord\.com|twitch\.tv|pinterest\.com|whatsapp\.com|openai\.com|chatgpt\.com|apple\.com)$/i;
 const URLRE=/^(localhost|(\d{1,3}\.){3}\d{1,3}|([a-z0-9-]+\.)+[a-z]{2,}|[a-z0-9-]+\.local)(:\d+)?([\/?#].*)?$/i;
 function searchUrl(q){const e=ENGINES[S.engine]||ENGINES.iridium;return e.url?e.url.replace('%s',encodeURIComponent(q)):'chrome-search://results?q='+encodeURIComponent(q)}
-function looksLikeUrl(s){s=s.trim();return !!s&&!/\s/.test(s)&&(/^(chrome|iridium|about|chrome-search):/i.test(s)||/^[a-z][a-z0-9+.-]*:\/\//i.test(s)||URLRE.test(s)||/^(data|javascript|view-source):/i.test(s))}
+function looksLikeUrl(s){s=s.trim();return !!s&&!/\s/.test(s)&&(/^(chrome|iridium|about|chrome-search):/i.test(s)||/^[a-z][a-z0-9+.-]*:\/\/\S/i.test(s)||URLRE.test(s)||/^(data|javascript|view-source):\S/i.test(s))}
 function resolve(inp){
   inp=(inp||'').trim();if(!inp)return 'chrome://newtab/';
   if(inp[0]==='?')return searchUrl(inp.slice(1).trim());
@@ -1638,8 +1638,8 @@ function resolve(inp){
   if(/^about:blank/i.test(inp))return 'about:blank';
   if(/^about:/i.test(inp))return resolve('chrome://'+inp.slice(6));
   if(/^chrome-search:\/\//i.test(inp))return inp;
-  if(/^[a-z][a-z0-9+.-]*:\/\//i.test(inp)&&!/\s/.test(inp))return inp;
-  if(/^(data|javascript|view-source):/i.test(inp)&&!/\s/.test(inp))return inp;
+  if(/^[a-z][a-z0-9+.-]*:\/\/\S/i.test(inp)&&!/\s/.test(inp))return inp;
+  if(/^(data|javascript|view-source):\S/i.test(inp)&&!/\s/.test(inp))return inp;
   if(looksLikeUrl(inp))return (/^(localhost|(\d{1,3}\.){3}\d{1,3})/.test(inp)?'http://':'https://')+inp;
   return searchUrl(inp);
 }
