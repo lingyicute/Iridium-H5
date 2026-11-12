@@ -1056,7 +1056,9 @@ body.host #snapprev{z-index:2900}
 body.dark .wframe{background:#202124;box-shadow:0 0 0 1px rgba(255,255,255,.14),0 12px 40px rgba(0,0,0,.6)}
 .wframe.blur{box-shadow:0 0 0 1px rgba(0,0,0,.16),0 6px 22px rgba(0,0,0,.26)}
 body.dark .wframe.blur{box-shadow:0 0 0 1px rgba(255,255,255,.1),0 6px 22px rgba(0,0,0,.45)}
-.wframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:inherit;background:transparent;opacity:0;transition:opacity .12s}
+.wframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:inherit;overflow:hidden;background:transparent;opacity:0;transition:opacity .12s}
+.wframe:not(.max):not(.fs) iframe,.wframe.ov iframe{clip-path:inset(0 round 12px)}
+.wframe.flt{z-index:1800!important}
 .wframe.rdy iframe{opacity:1}
 .wframe.max{left:0!important;top:0!important;width:100%!important;height:calc(100% - 48px)!important;border-radius:0;box-shadow:none;min-width:0;min-height:0}
 .wframe.fs{left:0!important;top:0!important;width:100%!important;height:100%!important;border-radius:0;box-shadow:none;min-width:0;min-height:0}
@@ -1084,17 +1086,40 @@ body.wfs #shelf{display:none}
 #layer{z-index:3200}
 #fstrigger{position:fixed;left:0;top:0;right:0;height:4px;z-index:69;display:none}
 body.fs:not(.reveal) #fstrigger{display:block}
-/* 窗口概览 */
-#ovl{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.42);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);animation:wfo .2s ease-out}
+/* 窗口概览 (ChromeOS Overview + Virtual Desks Bar) */
+#ovl{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.38);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);animation:wfo .2s ease-out}
+.ovdesks{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2150;display:flex;align-items:center;gap:10px;padding:6px 10px;border-radius:16px;background:rgba(32,33,36,.52);-webkit-backdrop-filter:blur(18px);backdrop-filter:blur(18px);box-shadow:0 0 0 1px rgba(255,255,255,.14);color:#fff;font-size:12px}
+.ovdesk{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px;border-radius:10px;background:rgba(255,255,255,.16);border:2px solid #a8c7fa;font-weight:500}
+.ovnewd{height:36px;padding:0 12px;border-radius:10px;background:rgba(255,255,255,.1);color:#e8eaed;display:flex;align-items:center;gap:6px;font-size:12px}
+.ovnewd:hover{background:rgba(255,255,255,.2)}
+.ovempty{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:2150;padding:12px 24px;border-radius:20px;background:rgba(32,33,36,.68);color:#e8eaed;font-size:14px;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);box-shadow:0 0 0 1px rgba(255,255,255,.12);pointer-events:none}
 .wframe.ov,.wframe.ovx{transition:transform .28s cubic-bezier(.2,0,0,1)}
-.wframe.ov{z-index:1500!important;border-radius:12px!important;box-shadow:0 0 0 1px rgba(255,255,255,.25),0 10px 30px rgba(0,0,0,.5)!important}
+.wframe.ov{z-index:1500!important;border-radius:0 0 12px 12px!important;overflow:hidden;box-shadow:0 0 0 1px rgba(255,255,255,.22),0 12px 32px rgba(0,0,0,.5)!important}
+.wframe.ov iframe{clip-path:inset(0 round 0 0 12px 12px)}
 .wframe.ov .wcover{display:block}
-.wframe.ov:hover{outline:3px solid #8ab4f8}
-.ovt{position:fixed;z-index:2100;height:28px;display:flex;align-items:center;gap:8px;color:#fff;font-size:13px;pointer-events:none;text-shadow:0 1px 3px rgba(0,0,0,.6);animation:wfo .2s ease-out}
+.wframe.ov:hover{outline:2px solid #a8c7fa}
+.ovt{position:fixed;z-index:2100;height:34px;padding:0 8px 0 12px;border-radius:12px 12px 0 0;background:rgba(40,42,46,.88);box-shadow:0 -1px 0 rgba(255,255,255,.18),1px 0 0 rgba(255,255,255,.18),-1px 0 0 rgba(255,255,255,.18);display:flex;align-items:center;gap:8px;color:#e8eaed;font-size:12.5px;pointer-events:none;animation:wfo .2s ease-out}
 .ovt .iri{flex:none}
 .ovt .wct{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ovt button{pointer-events:auto;width:24px;height:24px;border-radius:50%;background:rgba(255,255,255,.2);color:#fff;display:flex;align-items:center;justify-content:center;flex:none}
-.ovt button:hover{background:rgba(255,255,255,.38)}
+.ovt button{pointer-events:auto;width:24px;height:24px;border-radius:50%;background:transparent;color:#e8eaed;display:flex;align-items:center;justify-content:center;flex:none}
+.ovt button:hover{background:rgba(255,255,255,.18)}
+/* ChromeOS 2x2 窗口布局多任务菜单 (MultitaskMenuView) */
+.snapbub{display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;padding:12px 14px;border-radius:16px;background:var(--osb);color:var(--osfg);-webkit-backdrop-filter:blur(28px);backdrop-filter:blur(28px);box-shadow:0 0 0 1px var(--osline),0 8px 28px rgba(0,0,0,.35)}
+.snapbub .mcell{display:flex;flex-direction:column;align-items:center;gap:5px;font-size:11.5px;color:var(--os2)}
+.snapbub .mbox{width:82px;height:52px;border-radius:8px;border:1.5px solid var(--osline);padding:3px;display:flex;gap:3px;position:relative;background:rgba(128,128,128,.08)}
+.snapbub .mbox button{position:static;width:auto;height:100%;border:0;border-radius:4px;background:rgba(128,128,128,.24);transition:background-color .12s}
+.snapbub .mbox button:hover{background:var(--osacc)}
+.snapbub .mbox.full button{flex:1}
+.snapbub .mbox.flt{display:block}
+.snapbub .mbox.flt button{position:absolute;right:5px;bottom:5px;width:42px;height:28px;border-radius:5px;box-shadow:0 1px 4px rgba(0,0,0,.22)}
+/* ChromeOS 浏览器无痕专用暗色主题与工具栏无痕胶囊 */
+body.inc{--frame:#1b1b1f;--tab:#2b2b30;--tool:#2b2b30;--omni:#1e1f23;--omni-h:#26272c;--menu:#28292e;--page:#1e1f23;--card:#28292e;--page2:#25262b}
+body.inc.winblur #win{--frame:#232328}
+#profile.incpill{width:auto;height:28px;padding:0 10px;border-radius:14px;background:rgba(255,255,255,.1);margin:0 2px}
+#profile.incpill:hover{background:rgba(255,255,255,.18)}
+#incchip{height:28px;padding:0;margin:0;background:none;gap:5px;font-size:12px;font-weight:500;pointer-events:auto}
+body.dark ::-webkit-scrollbar-thumb,body.osdark #osset ::-webkit-scrollbar-thumb{background:rgba(232,234,237,.32);border:3px solid transparent;background-clip:padding-box}
+body.dark ::-webkit-scrollbar-thumb:hover,body.osdark #osset ::-webkit-scrollbar-thumb:hover{background:rgba(232,234,237,.52);border:3px solid transparent;background-clip:padding-box}
 @media (prefers-reduced-motion:reduce){.wframe.opening,.wframe.minning,.wframe.wclosing,#ovl,.ovt{animation-duration:.01ms!important}.wframe.wanim,.wframe.ov,.wframe.ovx{transition-duration:.01ms!important}}
 
 /* ================= 窗口动画 / 标签栏细节 ================= */
@@ -1118,7 +1143,6 @@ body.fs:not(.reveal) #fstrigger{display:block}
     <div id="tabs"></div>
     <button class="ts-btn" id="newtab" title="新标签页"></button>
     <div class="spacer" id="spacer"></div>
-    <div id="incchip" hidden></div>
     <div id="winctl"><button id="wmin" title="最小化"></button><button id="wmax" title="最大化"></button><button id="wclose" title="关闭"></button></div>
   </div>
   <div id="toolbar">
@@ -1134,7 +1158,7 @@ body.fs:not(.reveal) #fstrigger{display:block}
       <div id="sugg" hidden></div>
     </div>
     <button class="tb" id="extBtn" title="扩展程序"></button>
-    <button class="tb" id="profile" title="User"></button>
+    <button class="tb" id="profile" title="User" hidden><span id="incchip" hidden></span></button>
     <button class="tb" id="menuBtn" title="自定义及控制 Iridium"></button>
   </div>
   <div id="bmbar"><div id="bmitems"></div><button class="bm" id="bmover" hidden></button><div class="bm" id="bmother" hidden></div></div>
@@ -1308,11 +1332,11 @@ const ACCENTS={default:{n:'默认',sw:'#dee1e6'},
  purple:{n:'淡紫',sw:'#e9ddff',l:['#e9ddff','#fcf9ff','#efe8fa'],d:['#2c2145','#41355d','#201833']}};
 function applySettings(){
   const dark=INC||S.theme==='dark'||(S.theme==='system'&&isOsDark()),b=document.body;
-  b.classList.toggle('dark',dark);
+  b.classList.toggle('dark',dark);b.classList.toggle('inc',INC);
   b.classList.toggle('forcedark',S.flags['enable-force-dark']==='enabled');
   const a=ACCENTS[S.accent]||ACCENTS.default,st=b.style;
   ['--frame','--tool','--tab','--omni'].forEach(k=>st.removeProperty(k));
-  if(a.l){const c=dark?a.d:a.l;st.setProperty('--frame',c[0]);st.setProperty('--tool',c[1]);st.setProperty('--tab',c[1]);st.setProperty('--omni',c[2])}
+  if(!INC&&a.l){const c=dark?a.d:a.l;st.setProperty('--frame',c[0]);st.setProperty('--tool',c[1]);st.setProperty('--tab',c[1]);st.setProperty('--omni',c[2])}
   $('#bmbar').classList.toggle('hide',!S.showBm);
   $('#home').hidden=!S.showHome;
   renderBmBar();setTimeout(layoutBm,30);
@@ -2043,7 +2067,7 @@ function onDataChange(){
 
 /* ============ 工具栏按钮 ============ */
 $('#back').innerHTML=I.back;$('#fwd').innerHTML=I.fwd;$('#home').innerHTML=I.home;$('#menuBtn').innerHTML=I.more;
-$('#extBtn').innerHTML=svg(P.puzzle,20);$('#profile').innerHTML=INC?svg(P.inc,22):`<span class="avatar">${svg(P.person,18)}</span>`;
+$('#extBtn').innerHTML=svg(P.puzzle,20);if(INC){const pf=$('#profile'),ic=$('#incchip');pf.hidden=false;pf.classList.add('incpill');pf.removeAttribute('title');ic.hidden=false;ic.title='这只是界面演示，不是真正的无痕浏览；宿主浏览器可能保留网站数据';ic.setAttribute('aria-label','无痕模式（模拟）：'+ic.title);ic.innerHTML=svg(P.inc,18)+'无痕模式'}
 $('#tabsearch').innerHTML=svg(P.down,18);$('#newtab').innerHTML=svg(P.add,18);
 $('#back').onclick=()=>goBack(cur());$('#fwd').onclick=()=>goFwd(cur());
 $('#reload').onclick=()=>{const t=cur();t.loading?stop(t):reload(t)};
@@ -2053,7 +2077,7 @@ $('#back').addEventListener('contextmenu',e=>{e.preventDefault();const t=cur();i
 $('#fwd').addEventListener('contextmenu',e=>{e.preventDefault();const t=cur();if(t.idx<t.hist.length-1)showMenu(t.hist.slice(t.idx+1).map((h,i)=>({label:h.title||h.url,icon:fav(h.url,16),fn:()=>{t.idx=t.idx+1+i;load(t,h.url)}})),e.clientX,e.clientY)});
 $('#zoomBtn').onclick=e=>{const was=wasOwner;wasOwner='';if(e.detail>0&&was==='zoom')return;showZoomBubble()};
 function zoomRow(){return {custom:()=>{
-  const r=el(`<div class="zrow"><span class="ic"></span><span class="lb">缩放</span><button data-z="-1" title="缩小">${svg('M19 13H5v-2h14v2z',18)}</button><span class="zv"></span><button data-z="1" title="放大">${svg(P.add,18)}</button><span class="zsep"></span><button data-z="f" title="全屏 (F11)">${svg(P.full,18)}</button></div>`);
+  const r=el(`<div class="zrow"><span class="ic"></span><span class="lb">缩放</span><button data-z="-1" title="缩小">${svg('M19 13H5v-2h14v2z',18)}</button><span class="zv"></span><button data-z="1" title="放大">${svg(P.add,18)}</button><span class="zsep"></span><button data-z="f" title="全屏">${svg(P.full,18)}</button></div>`);
   const upd=()=>{$('.zv',r).textContent=Math.round(cur().zoom*100)+'%'};upd();
   r.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.z==='f'){closePopups();toggleFull()}else{zoomStep(cur(),+b.dataset.z,true);upd()}});
   return r}}}
@@ -2083,14 +2107,14 @@ function mainMenu(){
     {label:'书签和列表',icon:ic(P.star),sub:()=>[{label:'为此标签页添加书签…',key:'Ctrl+D',disabled:!canBookmark(t),fn:()=>bookmarkBubble(cur())},{label:'显示书签栏',checked:S.showBm,key:'Ctrl+Shift+B',fn:()=>{S.showBm=!S.showBm;saveS();applySettings()}},{label:'书签管理器',key:'Ctrl+Shift+O',fn:()=>openInternal('chrome://bookmarks/')},'-',...bmMenuItems(BM.bar),...(BM.other.length?['-',{label:'其他书签',icon:svg(P.folder,16),sub:()=>bmMenuItems(BM.other)}]:[])]},
     {label:'标签页组',icon:ic('M5 4h14c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H5c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2zm0 6v8h14v-8H5zM5 6v2h5V6H5z'),sub:()=>[{label:'新建标签页组',icon:ic(P.add),fn:()=>newGroup(cur())},...(Object.keys(groups).length?['-',...Object.values(groups).map(g=>({label:g.name||'未命名群组',icon:`<span class="gdot" style="background:${GCOL[g.color]};margin:4px"></span>`,fn:()=>{const m=groupMembers(g.id);if(g.collapsed)toggleGroup(g);if(m[0])activate(m[0])}}))]:[])]},
     {label:'扩展程序',icon:ic(P.puzzle),sub:[{label:'管理扩展程序',fn:()=>openInternal('chrome://extensions/')},{label:'实验功能',fn:()=>openInternal('chrome://flags/')}]},
-    {label:'删除浏览数据…',icon:ic(P.del),key:'Ctrl+Shift+Del',fn:clearDataDialog},
+    {label:'删除浏览数据…',icon:ic(P.del),key:'Ctrl+Shift+Backspace',fn:clearDataDialog},
     '-',zoomRow(),'-',
     {label:'打印…',icon:ic(P.print),key:'Ctrl+P',fn:()=>openPrint(t)},
     {label:'翻译…',icon:ic(P.translate),disabled:true},
     {label:'查找和修改',icon:ic(P.search),sub:[{label:'查找…',key:'Ctrl+F',fn:openFind}]},
 
     {label:'投放、保存和分享',icon:ic(P.cast),sub:[{label:'投放…',fn:()=>toast('找不到可用的投放设备')},{label:'将页面另存为…',key:'Ctrl+S',fn:soon('另存为')},{label:'创建快捷方式…',disabled:!/^https?:/i.test(t.url),fn:soon('创建快捷方式')},'-',{label:'复制链接',disabled:!/^https?:/i.test(t.url),fn:()=>{navigator.clipboard&&navigator.clipboard.writeText(t.url).then(()=>toast('链接已复制'),()=>toast('无法访问剪贴板'))}},{label:'生成二维码',disabled:!/^https?:/i.test(t.url),fn:soon('二维码')},{label:'在宿主浏览器中打开此页面',disabled:!/^https?:/i.test(t.url),fn:()=>openReal(t.url)}]},
-    {label:'更多工具',icon:ic(P.build),sub:[{label:'将页面另存为…',key:'Ctrl+S',fn:soon('另存为')},{label:'创建快捷方式…',fn:soon('创建快捷方式')},{label:'命名窗口…',fn:soon('命名窗口')},'-',{label:'清除浏览数据…',key:'Ctrl+Shift+Del',fn:clearDataDialog},{label:'扩展程序',fn:()=>openInternal('chrome://extensions/')},{label:'任务管理器',key:'Shift+Esc',fn:()=>openTaskMgr()},{label:'自定义 Iridium',fn:openCustomize},'-',{label:'开发者工具',key:'Ctrl+Shift+I',fn:()=>toast('开发者工具在 iframe 模式下不可用，请使用宿主浏览器的 F12')}]},
+    {label:'更多工具',icon:ic(P.build),sub:[{label:'将页面另存为…',key:'Ctrl+S',fn:soon('另存为')},{label:'创建快捷方式…',fn:soon('创建快捷方式')},{label:'命名窗口…',fn:soon('命名窗口')},'-',{label:'清除浏览数据…',key:'Ctrl+Shift+Backspace',fn:clearDataDialog},{label:'扩展程序',fn:()=>openInternal('chrome://extensions/')},{label:'任务管理器',key:'搜索+Esc',fn:()=>openTaskMgr()},{label:'自定义 Iridium',fn:openCustomize},'-',{label:'开发者工具',key:'Ctrl+Shift+I',fn:()=>toast('开发者工具在 iframe 模式下不可用，请使用宿主浏览器的 F12')}]},
     '-',
     {label:'帮助',icon:ic(P.help),sub:[{label:'关于 Iridium',fn:()=>openInternal('chrome://settings/help')},{label:'关于 IridiumOS',fn:()=>openOsSettings('about')},{label:'帮助中心',fn:soon('帮助中心')},{label:'报告问题…',key:'Alt+Shift+I',fn:soon('报告问题')},'-',{label:'chrome:// 内部页面',fn:()=>openInternal('chrome://about/')},{label:'版本信息',fn:()=>openInternal('chrome://version/')}]},
     {label:'设置',icon:ic(P.gear),fn:()=>openInternal('chrome://settings/')},
@@ -2423,7 +2447,7 @@ function pageSettings(t,u){
 <section data-s="performance"><h2 class="big">性能</h2><div class="card"><div class="hd">内存</div>${row('内存节省程序','不使用的标签页处于未活动状态时，Iridium 会释放其占用的内存，从而让其他标签页和应用保持流畅运行。',tg('memorySaver',S.memorySaver!==false))}</div><div class="card"><div class="hd">省电</div>${row('节能模式','启用后，Iridium 会通过限制后台活动和视觉效果来节省电量。',sel('energy',[['off','关闭'],['unplugged','电池电量降至 20% 及以下时开启'],['on','始终开启']],S.energy||'unplugged'))}</div><div class="card"><div class="hd">速度</div>${row('预加载网页','Iridium 会预加载您可能访问的网页，以加快浏览和搜索速度。',tg('preload',S.preload!==false))}</div></section>
 <section data-s="languages"><h2 class="big">语言</h2><div class="card"><div class="hd">首选语言</div>${row('Iridium 的显示语言','',sel('uiLang',[['zh','中文（简体）'],['en','English (United States)']],S.uiLang||'zh'))}${row('拼写检查','在文本框中输入内容时检查拼写',tg('spell',S.spell!==false))}${row('翻译外语网页','当网页语言不是您所用的语言时，提供翻译服务',tg('offerTranslate',S.offerTranslate!==false))}</div></section>
 <section data-s="downloads"><h2 class="big">下载内容</h2><div class="card">${row('位置','我的文件/下载','<button class="btn" data-soon="1">更改</button>')}${row('下载前询问每个文件的保存位置','',tg('askDl',!!S.askDl))}${row('下载完成后显示“下载内容”','',tg('showDl',S.showDl!==false))}</div></section>
-<section data-s="a11y"><h2 class="big">无障碍</h2><div class="card">${row('使用插入光标浏览网页','按 F7 键即可开启或关闭插入光标浏览功能',tg('caret',!!S.caret))}${row('页面缩放','',sel('pageZoom',[['75','75%'],['90','90%'],['100','100%（默认）'],['110','110%'],['125','125%'],['150','150%'],['200','200%']],S.pageZoom||'100'))}${row('字号','',sel('fontSize',[['s','小'],['m','中（推荐）'],['l','大'],['xl','特大']],S.fontSize||'m'))}${row('在 IridiumOS 设置中管理无障碍功能','','','chrome://os-settings/')}</div></section>
+<section data-s="a11y"><h2 class="big">无障碍</h2><div class="card">${row('使用插入光标浏览网页','按 Ctrl+搜索+7 即可开启或关闭插入光标浏览功能',tg('caret',!!S.caret))}${row('页面缩放','',sel('pageZoom',[['75','75%'],['90','90%'],['100','100%（默认）'],['110','110%'],['125','125%'],['150','150%'],['200','200%']],S.pageZoom||'100'))}${row('字号','',sel('fontSize',[['s','小'],['m','中（推荐）'],['l','大'],['xl','特大']],S.fontSize||'m'))}${row('在 IridiumOS 设置中管理无障碍功能','','','chrome://os-settings/')}</div></section>
 <section data-s="reset"><h2 class="big">重置设置</h2><div class="card">${row('将设置还原为原始默认设置','','<button class="btn" data-reset="1">重置设置</button>')}</div></section>
 <section data-s="help"><h2 class="big">关于 Iridium</h2><div class="card"><div class="srow" style="padding:28px 20px">${IRI(56)}<div class="stx" style="margin-left:6px"><div class="st" style="font-size:20px">Iridium</div><div class="sd">${svg(P.check,14).replace('<svg','<svg style="display:inline;vertical-align:-2px;color:#188038"')} Iridium 已是最新版本</div><div class="sd">版本 ${VERSION}（正式版本）（64 位）</div></div></div>${row('作者',AUTHOR,'')}${row('其他 IridiumOS 设置','在 IridiumOS 设置中查看设备与系统更新','','chrome://os-settings/about')}${row('获取 Iridium 帮助','','','')}${row('版本信息','chrome://version','','chrome://version/')}${row('开源许可','chrome://credits','','chrome://credits/')}</div></section>
 <div class="card" id="set-empty" hidden><div class="empty">找不到匹配的搜索结果</div></div>
@@ -2550,11 +2574,11 @@ function syncWin(){
   const b=document.body.classList;b.toggle('max',win.max);b.toggle('min',win.min&&win.open);b.toggle('closed',!win.open);
   if(!win.max&&!EMB)applyB();
   const was=EMB?{max:win.max,open:true,min:false}:(syncWin.s||{});if(((was.min&&!win.min)||(!was.open&&win.open))&&win.open&&!win.min)popWin();if(was.max!==undefined&&was.max!==win.max&&win.open&&!win.min&&!syncWin.noAnim)winAnim();syncWin.s={min:win.min,open:win.open,max:win.max};
-  $('#wmax').innerHTML=win.max?'<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><rect x="2" y="3.6" width="6.4" height="6.4" rx="1.3"/><path d="M4 3.6v-.4C4 2.4 4.6 1.8 5.4 1.8h3.4c.8 0 1.4.6 1.4 1.4v3.4c0 .8-.6 1.4-1.4 1.4h-.4"/></svg>':'<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="8" height="8" rx="1.5"/></svg>';
+  $('#wmax').innerHTML=win.max?'<svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M4 2v2H2v6h6V8h2V2H4zm4.6 4.6H8V4H5.4v-.6h3.2v3.2zM3.4 8.6V5.4h3.2v3.2H3.4z"/></svg>':'<svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M2 2v8h8V2H2zm6.6 6.6H3.4V3.4h5.2v5.2z"/></svg>';
   $('#wmax').title=win.max?'向下还原':'最大化';updateShelf();setTimeout(layoutBm,50)}
 window.addEventListener('resize',()=>{if(!win.max&&win.open&&!EMB)applyB()});
-$('#wmin').innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 8.5h8"/></svg>';
-$('#wclose').innerHTML='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.5 2.5l7 7m0-7l-7 7"/></svg>';
+$('#wmin').innerHTML='<svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="8.6" width="8" height="1.4" fill="currentColor"/></svg>';
+$('#wclose').innerHTML='<svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M9.7 3.3L8.7 2.3 6 5 3.3 2.3l-1 1L5 6 2.3 8.7l1 1L6 7l2.7 2.7 1-1L7 6z"/></svg>';
 $('#wmin').onclick=()=>{if(EMB){IWM.post('min');return}
   const w=$('#win'),r=w.getBoundingClientRect(),sh=$('#sh-iri').getBoundingClientRect();
   w.style.setProperty('--mx',(sh.left+sh.width/2-(r.left+r.width/2))+'px');w.style.setProperty('--my',(sh.top+sh.height/2-(r.top+r.height/2))+'px');
@@ -2590,7 +2614,8 @@ function restoreStart0(mode,url){
 $('#tabstrip').addEventListener('dblclick',e=>{if(e.target.id==='tabstrip'||e.target.id==='spacer'){if(EMB){IWM.post('togglemax');return}win.max=!win.max;syncWin()}});
 function shieldOn(c){const s=$('#shield');s.style.cursor=c||'';s.classList.add('on')}
 function shieldOff(){$('#shield').classList.remove('on')}
-function snapWin(side){winAnim();RB={x:side==='l'?0:Math.floor(innerWidth/2),y:0,w:Math.floor(innerWidth/2),h:innerHeight-48};win.max=false;syncWin();store.set('winb',RB)}
+function snapRect(side,W,h){if(side==='l2'){const w2=Math.round(W*2/3);return{x:0,y:0,w:w2,h}}if(side==='r1'){const w2=Math.round(W*2/3);return{x:w2,y:0,w:W-w2,h}}const hw=Math.floor(W/2);return{x:side==='l'?0:hw,y:0,w:side==='l'?hw:W-hw,h}}
+function snapWin(side){winAnim();RB=snapRect(side,innerWidth,innerHeight-48);win.max=false;syncWin();store.set('winb',RB)}
 $('#tabstrip').addEventListener('mousedown',e=>{
   if(e.button!==0||(e.target.id!=='tabstrip'&&e.target.id!=='spacer'))return;
   if(EMB)return;
@@ -2630,7 +2655,7 @@ $$('.rz').forEach(h=>h.addEventListener('mousedown',e=>{
   const mu=()=>{document.removeEventListener('mousemove',mm);document.removeEventListener('mouseup',mu);shieldOff();RB=clampB(Object.assign({},RB));store.set('winb',RB);layoutBm()};
   document.addEventListener('mousemove',mm);document.addEventListener('mouseup',mu);
 }));
-if(INC){const ic=$('#incchip');ic.hidden=false;ic.title='这只是界面演示，不是真正的无痕浏览；宿主浏览器可能保留网站数据';ic.setAttribute('aria-label','无痕模式（模拟）：'+ic.title);ic.innerHTML=svg(P.inc,18)+'无痕模式'}
+/* 无痕标识已在工具栏 #profile 胶囊内初始化（对齐 ChromeOS 仅在无痕/访客会话显示工具栏徽章） */
 
 /* ============ 快捷键 ============ */
 document.addEventListener('keydown',e=>{
@@ -2983,6 +3008,7 @@ function snapHint(ev){
   if(!r){p.style.display='none';return}
   Object.assign(p.style,{display:'block',left:r[0]+'px',top:r[1]+'px',width:r[2]+'px',height:r[3]+'px'});
 }
+function multitaskHtml(){return '<div class="snapbub" role="menu" aria-label="窗口布局菜单"><div class="mcell"><div class="mbox"><button data-s="l" style="flex:1" title="靠左半屏"></button><button data-s="r" style="flex:1" title="靠右半屏"></button></div><span>分屏</span></div><div class="mcell"><div class="mbox"><button data-s="l2" style="flex:2" title="左侧 2/3 分屏"></button><button data-s="r1" style="flex:1" title="右侧 1/3 分屏"></button></div><span>部分</span></div><div class="mcell"><div class="mbox full"><button data-s="fs" title="全屏"></button></div><span>全屏</span></div><div class="mcell"><div class="mbox flt"><button data-s="flt" title="浮动在顶部"></button></div><span>浮动</span></div></div>'}
 let sbT;
 function rmSB(){clearTimeout(sbT);$$('.snapbub').forEach(x=>x.remove())}
 {
@@ -2991,10 +3017,10 @@ function rmSB(){clearTimeout(sbT);$$('.snapbub').forEach(x=>x.remove())}
     clearTimeout(sbT);
     sbT=setTimeout(()=>{
       if(EMB){IWM.snapBubble(wm);return}if($('.snapbub'))return;const r=wm.getBoundingClientRect();
-      const b=el('<div class="snapbub"><button data-s="l" title="靠左分屏"><i style="left:0;width:50%"></i></button><button data-s="m" title="最大化"><i style="left:0;width:100%"></i></button><button data-s="r" title="靠右分屏"><i style="right:0;width:50%"></i></button></div>');
+      const b=el(multitaskHtml());
       document.body.append(b);
-      b.style.left=Math.max(4,Math.min(r.left-70,innerWidth-b.offsetWidth-4))+'px';b.style.top=(r.bottom+6)+'px';
-      b.onclick=e=>{const x=e.target.closest('button');if(!x)return;rmSB();if(x.dataset.s==='m'){win.max=true;syncWin()}else snapWin(x.dataset.s)};
+      b.style.left=Math.max(4,Math.min(r.right-b.offsetWidth,innerWidth-b.offsetWidth-6))+'px';b.style.top=(r.bottom+6)+'px';
+      b.onclick=e=>{const x=e.target.closest('button');if(!x)return;rmSB();const k=x.dataset.s;if(k==='fs')setFull(true);else if(k==='flt'){winAnim();const fw=Math.max(500,Math.round(innerWidth*.42)),fh=Math.max(360,Math.round((innerHeight-48)*.66));RB={x:innerWidth-fw-16,y:innerHeight-48-fh-16,w:fw,h:fh};win.max=false;syncWin();store.set('winb',RB)}else snapWin(k)};
       b.onmouseleave=()=>{sbT=setTimeout(rmSB,200)};b.onmouseenter=()=>clearTimeout(sbT);
     },700);
   });
@@ -3159,7 +3185,7 @@ $('#shelf').addEventListener('contextmenu',wallMenu);
   const bub=document.createElement('div');bub.id='fsbub';document.body.append(bub);
   let bt;
   window.fsHint=function(){
-    bub.innerHTML='按 <kbd>F11</kbd> 退出全屏模式';bub.classList.add('show');clearTimeout(bt);
+    bub.innerHTML='按 <kbd>全屏</kbd> 键退出全屏模式';bub.classList.add('show');clearTimeout(bt);
     bt=setTimeout(()=>bub.classList.remove('show'),3600);
   };
   document.addEventListener('fullscreenchange',()=>{if(!document.body.classList.contains('fs'))bub.classList.remove('show')});
@@ -3204,7 +3230,7 @@ function statusBubble(t){
     const eat=()=>{e.preventDefault();e.stopPropagation()};
     if((c&&e.shiftKey&&k==='r')||(c&&e.key==='F5')){eat();t.kind==='web'&&t.frame?reload(t):load(t,t.url)}
     else if(c&&e.shiftKey&&k==='w'){eat();closeWindow()}
-    else if(c&&e.shiftKey&&k==='m'){eat();$('#profile').click()}
+    else if(c&&e.shiftKey&&k==='m'){if(!$('#profile').hidden){eat();$('#profile').click()}}
     else if(c&&k==='k'&&!e.shiftKey){eat();focusOmni();urlIn.value='?';urlIn.setSelectionRange(1,1);refreshSugg()}
     else if(e.key==='F1'){eat();openInternal('chrome://settings/help')}
     else if(e.altKey&&e.shiftKey&&k==='t'){eat();const b=$('#back').disabled?$('#reload'):$('#back');b.focus()}
@@ -3347,7 +3373,7 @@ window.openPrint=function(t){
     <div class="pvl"><div class="pvpaper nohf0" id="pv-paper"><div class="pvhf"><span>${esc(title)}</span><span>${ds}</span></div><div class="pvbody"><div class="pvfav">${fav(/^chrome:/.test(t.url||'')?'':t.url,24)}</div><div class="pvh1">${esc(title)}</div><div class="pvurl">${esc(url)}</div>${lines}</div><div class="pvhf"><span>${esc(url)}</span><span>1/1</span></div></div></div>
     <div class="pvr"><div class="pvhead"><h2>打印</h2><div class="pvsheets">1 张纸</div></div>
       <div class="pvsets">
-        <div class="pvrow"><span>目标打印机</span><select id="pv-dest"><option value="pdf">另存为 PDF</option><option value="host">使用系统打印对话框…</option></select></div>
+        <div class="pvrow"><span>目标打印机</span><select id="pv-dest"><option value="pdf">另存为 PDF</option><option value="host">IridiumOS 打印机</option></select></div>
         <div class="pvrow"><span>页面</span><select id="pv-pages"><option value="a">全部</option><option value="o">仅奇数页</option><option value="e">仅偶数页</option><option value="c">自定义</option></select></div>
         <div class="pvrow" id="pv-range-row" hidden><span>页码范围</span><input type="text" id="pv-range" placeholder="例如 1-5, 8"></div>
         <div class="pvrow"><span>份数</span><input type="number" id="pv-copies" min="1" max="999" value="1"></div>
@@ -3770,7 +3796,7 @@ render();
   const send=(w,t,o)=>{try{w.ifr.contentWindow.postMessage(Object.assign({iri:1,t:t},o||{}),MSG_ORIGIN)}catch(e){}};
   const state=w=>({max:w.max,fs:w.fs,focus:focus===w.id,min:w.min});
   function push(w){
-    w.fr.classList.toggle('max',w.max&&!w.fs);w.fr.classList.toggle('fs',w.fs);w.fr.classList.toggle('blur',focus!==w.id);
+    w.fr.classList.toggle('max',w.max&&!w.fs);w.fr.classList.toggle('fs',w.fs);w.fr.classList.toggle('flt',!!w.flt&&!w.max&&!w.fs);w.fr.classList.toggle('blur',focus!==w.id);
     send(w,'state',state(w));
   }
   function pushAll(){wins.forEach(push);const fw=byId(focus);document.body.classList.toggle('wfs',!!(fw&&fw.fs&&!fw.min&&!ov));if(!wins.some(w=>!w.min&&!w.closing)){const os=$('#osset');document.title=(os&&!os._min)?'设置 - IridiumOS':'Iridium'}window.updateShelf()}
@@ -3783,7 +3809,7 @@ render();
   /* ---------- 创建 / 关闭 ---------- */
   function create(o){
     o=o||{};
-    const w={id:o.id||uid(),inc:!!o.inc,max:false,min:false,fs:false,snap:o.snap==='l'||o.snap==='r'?o.snap:null,ready:false,pending:o.tabs||null,url:o.url||null,mode:o.mode||'new',
+    const w={id:o.id||uid(),inc:!!o.inc,max:false,min:false,fs:false,flt:false,snap:['l','r','l2','r1'].includes(o.snap)?o.snap:null,ready:false,pending:o.tabs||null,url:o.url||null,mode:o.mode||'new',
       title:'新标签页',n:1,tabs:[],z:0,b:null,rb:validBounds(o.rb)?clone(o.rb):null,seq:++seq};
     const base=byId(focus)||order()[0];
     if(o.b){w.b=clampB(clone(o.b));w.max=!!o.max}
@@ -3792,7 +3818,7 @@ render();
       else{const b=clone(base.b);b.x+=32;b.y+=32;if(b.x+b.w>innerWidth-20||b.y+b.h>H())b.x=40,b.y=24;w.b=clampB(b)}
     }else{w.max=o.max!==false;w.b=defB()}
     if(!w.rb)w.rb=clone(w.b);
-    if(w.snap){const h=Math.floor(innerWidth/2);w.b={x:w.snap==='l'?0:h,y:0,w:w.snap==='l'?h:innerWidth-h,h:H()};w.max=false}
+    if(w.snap){w.b=snapRect(w.snap,innerWidth,H());w.max=false}
     const fr=el('<div class="wframe"><iframe title="" allow="fullscreen; clipboard-read; clipboard-write; geolocation; microphone; camera; autoplay; encrypted-media; picture-in-picture"></iframe><div class="wcover"></div>'+
       ['n','s','e','w','ne','nw','se','sw'].map(d=>'<i class="wrz" data-d="'+d+'"></i>').join('')+'</div>');
     w.fr=fr;w.ifr=fr.firstElementChild;
@@ -3908,10 +3934,10 @@ render();
   /* ---------- 最大化 / 吸附 / 全屏 ---------- */
   function setMax(w,on){
     if(w.fs)return;
-    if(on===w.max&&!w.snap)return;
+    if(on===w.max&&!w.snap&&!w.flt)return;
     flip(w,()=>{
-      if(on){if(!w.max&&!w.snap)w.rb=clone(w.b);w.max=true;w.snap=null}
-      else{w.max=false;w.snap=null;w.b=clampB(clone(w.rb||w.b));place(w)}
+      if(on){if(!w.max&&!w.snap&&!w.flt)w.rb=clone(w.b);w.max=true;w.snap=null;w.flt=false}
+      else{w.max=false;w.snap=null;w.flt=false;w.b=clampB(clone(w.rb||w.b));place(w)}
       pushAll();
     });
     saveWins();
@@ -3919,10 +3945,20 @@ render();
   function snap(w,side){
     if(w.fs)return;
     flip(w,()=>{
+      if(!w.max&&!w.snap&&!w.flt)w.rb=clone(w.b);
+      w.b=snapRect(side,innerWidth,H());
+      w.max=false;w.flt=false;w.snap=side;place(w);pushAll();
+    });
+    saveWins();
+  }
+  function floatWin(w){
+    if(w.fs)return;
+    flip(w,()=>{
+      if(w.flt){w.flt=false;w.b=clampB(clone(w.rb||w.b));place(w);pushAll();return}
       if(!w.max&&!w.snap)w.rb=clone(w.b);
-      const W=innerWidth,h=Math.floor(W/2);
-      w.b={x:side==='l'?0:h,y:0,w:side==='l'?h:W-h,h:H()};
-      w.max=false;w.snap=side;place(w);pushAll();
+      const fw=Math.max(500,Math.round(innerWidth*.42)),fh=Math.max(360,Math.round(H()*.68));
+      w.b={x:innerWidth-fw-16,y:Math.max(8,H()-fh-16),w:fw,h:fh};
+      w.max=false;w.snap=null;w.flt=true;place(w);pushAll();
     });
     saveWins();
   }
@@ -3937,7 +3973,7 @@ render();
   });
   addEventListener('resize',()=>{
     wins.forEach(w=>{
-      if(w.snap){const W=innerWidth,h=Math.floor(W/2);w.b={x:w.snap==='l'?0:h,y:0,w:w.snap==='l'?h:W-h,h:H()}}
+      if(w.snap){w.b=snapRect(w.snap,innerWidth,H())}
       else if(!w.max)w.b=clampB(w.b);
       place(w);
     });
@@ -4066,19 +4102,21 @@ render();
   function showSB(w,m){
     clearTimeout(sbT);if($('.snapbub'))return;
     const fr=w.ifr.getBoundingClientRect();
-    const b=el('<div class="snapbub"><button data-s="l" title="靠左分屏"><i style="left:0;width:50%"></i></button><button data-s="m" title="最大化"><i style="left:0;width:100%"></i></button><button data-s="r" title="靠右分屏"><i style="right:0;width:50%"></i></button></div>');
+    const b=el(multitaskHtml());
     document.body.append(b);
-    b.style.left=Math.max(4,Math.min(fr.left+m.l-70,innerWidth-b.offsetWidth-4))+'px';b.style.top=(fr.top+m.b+6)+'px';
-    b.onclick=e=>{const x=e.target.closest('button');if(!x)return;rmSB();focusWin(w);if(x.dataset.s==='m')setMax(w,true);else snap(w,x.dataset.s)};
+    b.style.left=Math.max(6,Math.min(fr.left+m.r-b.offsetWidth,innerWidth-b.offsetWidth-6))+'px';b.style.top=(fr.top+m.b+6)+'px';
+    b.onclick=e=>{const x=e.target.closest('button');if(!x)return;rmSB();focusWin(w);const k=x.dataset.s;if(k==='fs')setFs(w,true);else if(k==='flt')floatWin(w);else snap(w,k)};
     b.onmouseleave=()=>{sbT=setTimeout(rmSB,200)};b.onmouseenter=()=>clearTimeout(sbT);
   }
 
   /* ---------- 窗口概览 ---------- */
   function enterOv(){
-    if(!wins.length||ov)return;
+    if(ov)return;
     closeOS();closePopups();rmSB();
-    const bd=el('<div id="ovl"></div>');document.body.append(bd);
-    ov={bd:bd,labels:[]};bd.onclick=()=>exitOv();
+    const bd=el('<div id="ovl"></div>'),dk=el('<div class="ovdesks"><div class="ovdesk">桌面 1</div><button class="ovnewd" type="button">+ 新建桌面</button></div>');
+    $('.ovnewd',dk).onclick=e=>{e.stopPropagation();toast('此演示目前仅支持单个虚拟桌面')};
+    document.body.append(bd,dk);
+    ov={bd:bd,dk:dk,empty:null,labels:[]};bd.onclick=()=>exitOv();
     document.body.classList.add('ov');pushAll();
     wins.forEach(w=>{clearTimeout(w._ovt);w.fr.classList.remove('ovx');w.fr.classList.add('ov');w.fr.style.display=''});
     try{if(document.activeElement)document.activeElement.blur();window.focus()}catch(e){}
@@ -4086,27 +4124,27 @@ render();
   }
   function ovLayout(){
     if(!ov)return;
-    ov.labels.forEach(l=>l.remove());ov.labels=[];
+    ov.labels.forEach(l=>l.remove());ov.labels=[];if(ov.empty){ov.empty.remove();ov.empty=null}
     const list=wins.filter(w=>!w.closing).sort((a,b)=>a.seq-b.seq),n=list.length;
-    if(!n){exitOv();return}
-    const W=innerWidth,h=H(),pad=34;
+    if(!n){ov.empty=el('<div class="ovempty">没有最近使用的内容</div>');document.body.append(ov.empty);return}
+    const W=innerWidth,top0=68,h=H()-top0,pad=34;
     const cols=Math.min(n,Math.ceil(Math.sqrt(n*W/h))),rows=Math.ceil(n/cols),cw=W/cols,ch=h/rows;
     list.forEach((w,i)=>{
       const c=i%cols,r=Math.floor(i/cols),inRow=r===rows-1?n-(rows-1)*cols:cols,x0=(W-inRow*cw)/2;
-      const full=w.max||w.fs,nl=full?0:w.b.x,nt=full?0:w.b.y,nw=full?W:w.b.w,nh=full?(w.fs?innerHeight:h):w.b.h;
-      const s=Math.min((cw-pad*2)/nw,(ch-pad*2-30)/nh,1);
-      const tx=x0+c*cw+(cw-nw*s)/2,ty=r*ch+34+(ch-34-nh*s)/2;
+      const full=w.max||w.fs,nl=full?0:w.b.x,nt=full?0:w.b.y,nw=full?W:w.b.w,nh=full?(w.fs?innerHeight:H()):w.b.h;
+      const s=Math.min((cw-pad*2)/nw,(ch-pad*2-34)/nh,1);
+      const tx=x0+c*cw+(cw-nw*s)/2,ty=top0+r*ch+34+(ch-34-nh*s)/2;
       w.fr.style.transform='translate('+(tx-nl)+'px,'+(ty-nt)+'px) scale('+s+')';
       const lb=el('<div class="ovt">'+IRI(18)+'<span class="wct"></span><button title="关闭窗口">'+svg(P.close,14)+'</button></div>');
       $('.wct',lb).textContent=(w.inc?'[无痕] ':'')+(w.title||'新标签页');
-      lb.style.left=tx+'px';lb.style.top=(ty-30)+'px';lb.style.width=Math.max(120,nw*s)+'px';
+      lb.style.left=tx+'px';lb.style.top=(ty-34)+'px';lb.style.width=Math.max(120,nw*s)+'px';
       $('button',lb).onclick=ev=>{ev.stopPropagation();closeWin(w)};
       document.body.append(lb);ov.labels.push(lb);
     });
   }
   function exitOv(sel){
     if(!ov)return;
-    const o=ov;ov=null;o.labels.forEach(l=>l.remove());o.bd.remove();
+    const o=ov;ov=null;o.labels.forEach(l=>l.remove());o.dk&&o.dk.remove();o.empty&&o.empty.remove();o.bd.remove();
     document.body.classList.remove('ov');
     wins.forEach(w=>{
       clearTimeout(w._ovt);

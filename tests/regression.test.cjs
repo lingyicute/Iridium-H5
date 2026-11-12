@@ -748,3 +748,46 @@ test('quick settings, calendar bubble, OS settings, launcher icons and lock shel
   assert.equal(await page.locator('#lock .lshelf [data-lp="off"]').isVisible(), true);
   assert.equal(await page.locator('#lock .lshelf .lstat').isVisible(), true);
 });
+
+test('window multitask menu, overview desks bar, toolbar avatar policy and ChromeOS labels align with ChromeOS', async t => {
+  const { page, frame } = await desktop(t, { settings: { accent: 'rose' } });
+  assert.equal(await frame.evaluate(() => document.querySelector('#profile').hidden), true);
+
+  const menuInfo = await frame.evaluate(() => {
+    mainMenu();
+    const texts = [...document.querySelectorAll('#layer .mi')].map(x => x.textContent);
+    const more = [...document.querySelectorAll('#layer .mi')].find(x => x._it && x._it.label === '更多工具');
+    const sub = more._it.sub.map(x => x && (x.label + ':' + (x.key || '')));
+    closePopups();
+    openPrint(cur());
+    const printOpts = [...document.querySelectorAll('#pv-dest option')].map(o => o.textContent);
+    document.querySelector('#pv-cancel').click();
+    return { texts, sub, printOpts };
+  });
+  assert.equal(menuInfo.texts.some(s => s.includes('Ctrl+Shift+Backspace')), true);
+  assert.equal(menuInfo.sub.includes('任务管理器:搜索+Esc'), true);
+  assert.equal(menuInfo.printOpts.includes('使用系统打印对话框…'), false);
+
+  await frame.evaluate(() => IWM.snapBubble(document.querySelector('#wmax')));
+  await page.locator('.snapbub').waitFor({ state: 'visible' });
+  const mtLabels = await page.evaluate(() => [...document.querySelectorAll('.snapbub .mcell span')].map(s => s.textContent));
+  assert.deepEqual(mtLabels, ['分屏', '部分', '全屏', '浮动']);
+  await page.locator('.snapbub [data-s="l2"]').click();
+  assert.equal(await page.evaluate(() => WM.wins[0].snap === 'l2' && WM.wins[0].b.w === Math.round(innerWidth * 2 / 3)), true);
+
+  await page.evaluate(() => WM.newWindow(true));
+  const inc = await windowFrame(page, 1);
+  const incInfo = await inc.evaluate(() => ({
+    profHidden: document.querySelector('#profile').hidden,
+    chipInToolbar: !!document.querySelector('#toolbar #profile #incchip'),
+    hasIncClass: document.body.classList.contains('inc'),
+    noInlineAccent: !document.body.style.getPropertyValue('--frame'),
+  }));
+  assert.deepEqual(incInfo, { profHidden: false, chipInToolbar: true, hasIncClass: true, noInlineAccent: true });
+
+  await page.evaluate(() => { [...WM.wins].forEach(w => w.ifr.contentWindow.closeWindow()); });
+  await page.waitForFunction(() => WM.wins.length === 0);
+  await page.evaluate(() => WM.toggleOverview());
+  assert.equal(await page.locator('.ovdesks .ovdesk').textContent(), '桌面 1');
+  assert.equal(await page.locator('.ovempty').textContent(), '没有最近使用的内容');
+});
