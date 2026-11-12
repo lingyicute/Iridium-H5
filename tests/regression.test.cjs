@@ -691,3 +691,25 @@ test('simulated incognito states its limits, skips favicon requests and is not r
   const normal = await windowFrame(page, 0);
   assert.equal(await normal.evaluate(() => fav('https://example.com/', 16).includes('google.com')), true);
 });
+
+test('shelf centers hotseat apps, rounds corners when unmaximized, and splits date and status pods', async t => {
+  const { page, frame } = await desktop(t);
+  const maxState = await page.evaluate(() => {
+    const hs = document.querySelector('#hotseat').getBoundingClientRect();
+    const sh = getComputedStyle(document.querySelector('#shelf'));
+    return {
+      centerDelta: Math.abs((hs.left + hs.width / 2) - innerWidth / 2),
+      maxRadius: sh.borderTopLeftRadius,
+      hasDateTray: !!document.querySelector('#datetray #date') && document.querySelector('#datetray').textContent.length > 0,
+      hasLauncherDot: !!document.querySelector('#launcher .ldot'),
+      noHardWhiteBolt: !batIcon(80, true).includes('fill="#fff"') || batIcon(80, true).includes('<mask'),
+    };
+  });
+  assert.ok(maxState.centerDelta < 4, 'hotseat must be centered on display');
+  assert.equal(maxState.maxRadius, '0px');
+  assert.equal(maxState.hasDateTray, true);
+  assert.equal(maxState.hasLauncherDot, true);
+  assert.equal(maxState.noHardWhiteBolt, true);
+  await frame.locator('#wmax').click();
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#shelf')).borderTopLeftRadius === '24px');
+});

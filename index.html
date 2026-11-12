@@ -363,26 +363,41 @@ body.dark .selbar{color:var(--onbluec)}
 .psearch:focus-within{box-shadow:inset 0 0 0 2px var(--blue);background:var(--page)}
 /* ================= 桌面环境 ================= */
 body{font-family:Roboto,"Google Sans","Noto Sans CJK SC","Noto Sans SC","Noto Sans","Droid Sans Fallback","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
-  --shelf:rgba(238,241,246,.8);--shelf-fg:#1f1f1f;--shelf-hov:rgba(0,0,0,.08);--sttray:rgba(0,0,0,.07);--osb:rgba(248,250,253,.97);--osfg:#1f1f1f;--os2:#5f6368;--ostile:#e1e6ee;--osacc:#0b57d0;--osaccfg:#fff;--osline:rgba(0,0,0,.12)}
-body.osdark{--shelf:rgba(32,33,36,.78);--shelf-fg:#e8eaed;--shelf-hov:rgba(255,255,255,.14);--sttray:rgba(255,255,255,.1);--osb:rgba(41,42,45,.97);--osfg:#e8eaed;--os2:#9aa0a6;--ostile:#3c4043;--osacc:#a8c7fa;--osaccfg:#062e6f;--osline:rgba(255,255,255,.14)}
+  --shelf:rgba(238,241,246,.78);--shelf-max:#e5e9f0;--shelf-fg:#1f1f1f;--shelf-hov:rgba(0,0,0,.08);--sttray:rgba(0,0,0,.06);--osb:rgba(246,248,252,.94);--osfg:#1f1f1f;--os2:#5f6368;--ostile:#dfe4ee;--osacc:#0b57d0;--osaccfg:#fff;--osline:rgba(0,0,0,.12)}
+body.osdark{--shelf:rgba(32,33,36,.74);--shelf-max:#202124;--shelf-fg:#e8eaed;--shelf-hov:rgba(255,255,255,.14);--sttray:rgba(255,255,255,.1);--osb:rgba(40,42,46,.94);--osfg:#e8eaed;--os2:#9aa0a6;--ostile:#3c4043;--osacc:#a8c7fa;--osaccfg:#062e6f;--osline:rgba(255,255,255,.14)}
 #desktop{position:fixed;inset:0;background-size:cover;background-position:center}
 #snapprev{position:fixed;z-index:5;border-radius:12px;background:rgba(138,180,248,.26);border:2px solid rgba(138,180,248,.75);pointer-events:none;display:none;transition:left .1s,top .1s,width .1s,height .1s}
-/* 置物架 (Shelf) */
-#shelf{position:fixed;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;gap:4px;padding:0 8px 0 6px;z-index:3000;background:var(--shelf);color:var(--shelf-fg);-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 -1px 0 rgba(255,255,255,.06)}
+/* 书架 (ChromeOS Shelf：左侧启动器、居中 Hotseat 应用栏、右侧日期+状态双胶囊) */
+#shelf{position:fixed;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 6px;z-index:3000;background:var(--shelf);color:var(--shelf-fg);border-radius:24px 24px 0 0;-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 -1px 0 rgba(255,255,255,.08);transition:background-color .2s cubic-bezier(.2,0,0,1),border-radius .2s cubic-bezier(.2,0,0,1),transform .22s cubic-bezier(.2,0,0,1)}
+body.shmax:not(.ov):not(.shauto) #shelf{border-radius:0;background:var(--shelf-max)}
+body.shauto.shhaswin:not(.ov):not(.shpeek) #shelf{transform:translateY(45px)}
+body.shauto.max #win,body.shauto .wframe.max,body.shauto #osset.max{height:100%!important}
 body.fs #shelf{display:none}
-#shelf .sbtn{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;margin-right:4px;color:var(--shelf-fg)}
-#shelf .sbtn:hover,#shelf .sbtn.lon{background:var(--shelf-hov)}
-.sitem{width:46px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;flex:none;transition:background .12s}
+#shelf .sbtn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;margin-left:2px;background:var(--sttray);color:var(--shelf-fg);transition:background-color .12s}
+#shelf .sbtn:hover{background:var(--shelf-hov)}
+#shelf .sbtn.lon{background:var(--osacc);color:var(--osaccfg)}
+#shelf .sbtn .ldot{transition:transform .16s cubic-bezier(.2,0,0,1),opacity .14s}
+#shelf .sbtn.lon .ldot{transform:scale(.45);opacity:0;transform-origin:12px 12px}
+#hotseat{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;height:100%}
+@media (max-width:520px){#hotseat{position:static;transform:none}}
+.sitem{width:44px;height:42px;padding-bottom:3px;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;flex:none;transition:background .12s}
 .sitem:hover{background:var(--shelf-hov)}
 .sitem:active{transform:scale(.93)}
-.sitem::after{content:'';position:absolute;bottom:1px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:3px;background:var(--shelf-fg);opacity:0;transition:width .18s,margin .18s,opacity .18s}
-.sitem.run::after{opacity:.7}
-.sitem.act::after{width:14px;margin-left:-7px;opacity:1}
+.sitem::after{content:'';position:absolute;bottom:2px;left:50%;width:6px;height:3px;margin-left:-3px;border-radius:2px;background:var(--shelf-fg);opacity:0;transition:width .18s,margin .18s,opacity .18s}
+.sitem.run::after{width:8px;margin-left:-4px;opacity:.62}
+.sitem.act::after{width:16px;margin-left:-8px;opacity:1}
 .aic{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;flex:none}
-#status{margin-left:auto;height:38px;border-radius:19px;padding:0 14px;display:flex;align-items:center;gap:10px;font-size:13px;background:var(--sttray);color:var(--shelf-fg);flex:none}
-#status:hover{background:var(--shelf-hov)}
-#status.on{background:var(--osacc);color:var(--osaccfg)}
-#status svg{display:block}
+#statusarea{margin-left:auto;display:flex;align-items:center;gap:3px;flex:none}
+#datetray,#status{height:36px;padding:0 12px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;background:var(--sttray);color:var(--shelf-fg);flex:none;position:relative;transition:background-color .12s,color .12s}
+#datetray{border-radius:18px 6px 6px 18px}
+#status{border-radius:6px 18px 18px 6px}
+#datetray:hover,#status:hover{background:var(--shelf-hov)}
+#datetray.on,#status.on{background:var(--osacc);color:var(--osaccfg)}
+#datetray svg,#status svg{display:block}
+.menu.osmenu{background:var(--osb);color:var(--osfg);-webkit-backdrop-filter:blur(28px);backdrop-filter:blur(28px);border-radius:14px;box-shadow:0 0 0 1px var(--osline),0 8px 28px rgba(0,0,0,.35)}
+.menu.osmenu .mi .ic,.menu.osmenu .mi .k{color:var(--os2)}
+.menu.osmenu .mi.hl,.menu.osmenu .mi:hover{background:var(--shelf-hov)}
+.menu.osmenu .ms{background:var(--osline)}
 /* 启动器 / 快速设置气泡 */
 .osb{position:fixed;z-index:3100;background:var(--osb);color:var(--osfg);border-radius:24px;box-shadow:0 0 0 1px rgba(0,0,0,.1),0 8px 32px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);animation:osup .16s cubic-bezier(.2,.8,.2,1);user-select:none}
 @keyframes osup{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
@@ -1111,7 +1126,7 @@ body.fs:not(.reveal) #fstrigger{display:block}
   </div>
   <i class="rz" data-d="n"></i><i class="rz" data-d="s"></i><i class="rz" data-d="e"></i><i class="rz" data-d="w"></i><i class="rz" data-d="ne"></i><i class="rz" data-d="nw"></i><i class="rz" data-d="se"></i><i class="rz" data-d="sw"></i>
 </div>
-<div id="shelf"><button class="sbtn" id="launcher" title="启动器"></button><button class="sitem" id="sh-iri" title="Iridium"></button><button class="sitem" id="sh-files" title="文件"></button><button class="sitem" id="sh-set" title="设置"></button><button id="status"></button></div>
+<div id="shelf"><button class="sbtn" id="launcher" title="启动器"></button><div id="hotseat"><button class="sitem" id="sh-iri" title="Iridium"></button><button class="sitem" id="sh-files" title="文件"></button><button class="sitem" id="sh-set" title="设置"></button></div><div id="statusarea"><button id="datetray"></button><button id="status"></button></div></div>
 <div id="dim"></div><div id="night"></div>
 <div id="hcard" class="hcard" hidden></div>
 <div id="shield"></div>
@@ -2671,7 +2686,7 @@ Object.assign(P,{
   wifiOff:'M22.99 9C19.15 5.16 13.8 3.76 8.84 4.78l2.52 2.52c3.47-.17 6.99 1.05 9.63 3.7l2-2zm-4 4c-1.29-1.29-2.84-2.13-4.49-2.56l3.53 3.53.96-.97zM2 3.05 5.07 6.1C3.6 6.82 2.22 7.78 1 9l2 2c1.23-1.23 2.65-2.16 4.17-2.78l2.24 2.24C7.79 10.89 6.27 11.74 5 13l2 2c1.35-1.35 3.11-2.04 4.89-2.06l7.08 7.08L20.24 18.75 3.27 1.78 2 3.05zM9 17l3 3 3-3c-1.65-1.66-4.34-1.66-6 0z',
   dnd:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z'
 });
-const OS=Object.assign({dark:null,wall:0,wifi:true,bt:false,dnd:false,night:false,bright:100,vol:70},store.get('os',{}));
+const OS=Object.assign({dark:null,wall:0,wifi:true,bt:false,dnd:false,night:false,bright:100,vol:70,autohide:false},store.get('os',{}));
 const saveOS=()=>store.set('os',OS);
 const isOsDark=()=>OS.dark==null?mq.matches:!!OS.dark;
 const netOn=()=>navigator.onLine&&OS.wifi;
@@ -2683,29 +2698,52 @@ const WALLS=[
   {n:'沙丘',c:'radial-gradient(ellipse at 30% 25%,#fff1d6 0,transparent 50%),radial-gradient(ellipse at 80% 85%,#e0a36b 0,transparent 55%),linear-gradient(160deg,#f1c995,#c27a4a)'}];
 const hhmm=()=>new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit',hour12:false});
 const dateStr=()=>new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'});
-let BAT={l:100,c:true};
+const shortDate=()=>new Date().toLocaleDateString('zh-CN',{month:'short',day:'numeric'});
+let BAT={l:100,c:true},batSeq=0;
 if(navigator.getBattery)navigator.getBattery().then(b=>{const u=()=>{BAT={l:Math.round(b.level*100),c:b.charging};renderStatus()};b.addEventListener('levelchange',u);b.addEventListener('chargingchange',u);u()}).catch(()=>{});
+function syncShelf(){
+  if(EMB)return;
+  const os=$('#osset'),osVis=!!(os&&!os._min),osMax=!!(osVis&&os.classList.contains('max'));
+  const ws=window.WM?WM.wins:[];
+  const winVis=WM?ws.some(w=>!w.min&&!w.closing):(win.open&&!win.min);
+  const winMax=WM?ws.some(w=>!w.min&&!w.closing&&w.max&&!w.fs):(win.open&&!win.min&&win.max);
+  const b=document.body.classList;
+  b.toggle('shmax',osMax||winMax);
+  b.toggle('shauto',!!OS.autohide);
+  b.toggle('shhaswin',osVis||winVis);
+  if(osOpen)b.add('shpeek');
+}
 function applyOS(){
   document.body.classList.toggle('osdark',isOsDark());
   $('#desktop').style.background=(WALLS[OS.wall]||WALLS[0]).c;
   $('#dim').style.opacity=(100-OS.bright)/100*.75;
   $('#night').style.opacity=OS.night?.35:0;
+  syncShelf();
   renderStatus();
 }
 function batIcon(l,c){
   const h=Math.max(1,Math.round(Math.min(100,Math.max(0,l))/100*12.5)),y=20.5-h;
-  return `<svg viewBox="0 0 24 24" width="18" height="18"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z" fill="currentColor" opacity=".32"/><rect x="7" y="${y}" width="10" height="${h}" rx="1" fill="currentColor"/>${c?'<path d="M13 7l-3.5 6h2.5v4l3.5-6H13z" fill="#fff" opacity=".9"/>':''}</svg>`;
+  if(c){const mid='bm'+(++batSeq%9);return `<svg viewBox="0 0 24 24" width="18" height="18"><defs><mask id="${mid}"><rect width="24" height="24" fill="#fff"/><path d="M13.2 6.6L9.2 13h2.6v4.4l4-6.4h-2.6z" fill="#000"/></mask></defs><g mask="url(#${mid})"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z" fill="currentColor" opacity=".35"/><rect x="7" y="${y}" width="10" height="${h}" rx="1" fill="currentColor"/></g></svg>`}
+  return `<svg viewBox="0 0 24 24" width="18" height="18"><path d="M15.67 4H14V2h-4v2H8.33C7.6 4 7 4.6 7 5.33v15.33C7 21.4 7.6 22 8.33 22h7.33c.74 0 1.34-.6 1.34-1.33V5.33C17 4.6 16.4 4 15.67 4z" fill="currentColor" opacity=".32"/><rect x="7" y="${y}" width="10" height="${h}" rx="1" fill="currentColor"/></svg>`;
 }
 function renderStatus(){
   const s=$('#status');if(!s)return;
+  const dt=$('#datetray');
+  if(dt){dt.innerHTML=`${OS.dnd?`<span style="display:flex">${svg(P.dnd,16)}</span>`:''}<span id="date">${shortDate()}</span>`;dt.title=dateStr()+(OS.dnd?'\n勿扰模式已开启':'')}
   const wf=netOn();
-  s.innerHTML=`<span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span>${OS.dnd?`<span style="display:flex">${svg(P.dnd,16)}</span>`:''}<span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span id="clock">${hhmm()}</span>`;
+  s.innerHTML=`<span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span>${OS.bt?`<span style="display:flex">${svg(P.bt,16)}</span>`:''}<span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span id="clock">${hhmm()}</span>`;
   s.title=dateStr()+' '+hhmm()+'\n电池电量 '+BAT.l+'%'+(BAT.c?'（正在充电）':'');
-  const lock=$('#lock');if(lock){$('.tm',lock).textContent=hhmm();$('.lt>div:not(.tm)',lock).textContent=dateStr()}
+  const lock=$('#lock');if(lock){$('.tm',lock).textContent=hhmm();$('.lt>div:not(.tm)',lock).textContent=dateStr();const ls=$('.lstat',lock);if(ls)ls.innerHTML=`<span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span>${hhmm()}</span>`}
 }
 mq.addEventListener&&mq.addEventListener('change',()=>{if(OS.dark==null){applyOS();applySettings()}});
 setInterval(renderStatus,15000);
 addEventListener('online',renderStatus);addEventListener('offline',renderStatus);
+document.addEventListener('mousemove',e=>{
+  if(EMB||!OS.autohide)return;
+  const b=document.body.classList;
+  if(e.clientY>=innerHeight-4)b.add('shpeek');
+  else if(b.contains('shpeek')&&e.clientY<innerHeight-54&&!osOpen&&!layer.querySelector('.osmenu'))b.remove('shpeek');
+});
 
 /* 应用 */
 const APPS=[{id:'iri',n:'Iridium',k:'browser chrome'},{id:'files',n:'文件',k:'files',ic:P.folder,bg:'#1a73e8'},{id:'set',n:'设置',k:'settings',ic:P.gear,bg:'#5f6368'},{id:'cam',n:'相机',k:'camera',ic:P.cam,bg:'#d93025'},{id:'cal',n:'日历',k:'calendar',ic:P.cal,bg:'#1a73e8'},{id:'photos',n:'图库',k:'photos gallery',ic:P.bm,bg:'#f29900'}];
@@ -2717,12 +2755,12 @@ function openApp(id){
   else if(id==='cal')toggleQS(true);
   else toast(((APPS.find(a=>a.id===id)||{}).n||'该应用')+'：此演示环境中暂不可用');
 }
-function updateShelf(){const s=$('#sh-iri');if(!s)return;s.classList.toggle('run',win.open);s.classList.toggle('act',win.open&&!win.min)}
+function updateShelf(){const s=$('#sh-iri');if(!s)return;s.classList.toggle('run',win.open);s.classList.toggle('act',win.open&&!win.min);syncShelf()}
 
 /* 气泡管理 */
 let osOpen='';
-function closeOS(){$$('.osb').forEach(x=>x.remove());osOpen='';$('#status').classList.remove('on');$('#launcher').classList.remove('lon')}
-document.addEventListener('mousedown',e=>{if(osOpen&&!e.target.closest('.osb,#status,#launcher'))closeOS()},true);
+function closeOS(){$$('.osb').forEach(x=>x.remove());osOpen='';$('#status').classList.remove('on');const dt=$('#datetray');dt&&dt.classList.remove('on');$('#launcher').classList.remove('lon');if(!OS.autohide)document.body.classList.remove('shpeek')}
+document.addEventListener('mousedown',e=>{if(osOpen&&!e.target.closest('.osb,#status,#datetray,#launcher'))closeOS()},true);
 window.addEventListener('blur',closeOS);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOS()});
 
@@ -2835,18 +2873,21 @@ function openOsSettings(sec){
     w._min=false;w.style.display='';w.style.zIndex=2000;w.classList.remove('blur');
     $('#sh-set').classList.add('run','act');
     if(window.WM&&WM.blurAll)WM.blurAll();
+    syncShelf();
     document.title='设置 - IridiumOS';
   };
   const minSelf=()=>{
     w._min=true;w.style.display='none';w.classList.add('blur');
     $('#sh-set').classList.remove('act');
+    syncShelf();
     if(window.WM&&WM.focusTop)WM.focusTop();
   };
   const toggleMax=()=>{
     const on=!w.classList.toggle('max');
     const b=$('[data-max]',w);b.innerHTML=on?icMax:icRest;b.title=on?'最大化':'向下还原';
+    syncShelf();
   };
-  const close=()=>{w.remove();$('#sh-set').classList.remove('run','act');if(window.WM&&WM.focusTop)WM.focusTop()};
+  const close=()=>{w.remove();$('#sh-set').classList.remove('run','act');syncShelf();if(window.WM&&WM.focusTop)WM.focusTop()};
   w._setSec=s=>{sc=s;draw()};w._focus=focusSelf;w._minFn=minSelf;
   w.addEventListener('click',e=>{
     if(e.target.closest('[data-x]')){close();return}
@@ -2912,21 +2953,52 @@ function rmSB(){clearTimeout(sbT);$$('.snapbub').forEach(x=>x.remove())}
   wm.addEventListener('click',rmSB);
 }
 
-/* 置物架初始化 */
-$('#launcher').innerHTML='<svg width="22" height="22" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="2.6"/></svg>';
-$('#sh-iri').innerHTML=IRI(30);$('#sh-files').innerHTML=appIcon(APPS[1],30);$('#sh-set').innerHTML=appIcon(APPS[2],30);
+function showOsMenu(items,x,y,up){
+  showMenu(items,x,y);
+  const m=layer.firstElementChild;
+  if(m){
+    m.classList.add('osmenu');
+    if(up){const h=m.offsetHeight,tp=Math.max(4,y-h);m.style.top=tp+'px';m.style.transformOrigin='bottom left'}
+  }
+}
+function toggleAutohide(){OS.autohide=!OS.autohide;saveOS();applyOS();dispatchEvent(new Event('resize'))}
+function shelfBgMenuItems(){
+  const ic=p=>svg(p,18);
+  return [
+    {label:'自动隐藏书架',checked:!!OS.autohide,fn:toggleAutohide},
+    {label:'设置壁纸和样式',icon:ic(P.edit),fn:()=>openOsSettings('personal')},
+    {label:'显示器设置',icon:ic(P.bright),fn:()=>openOsSettings('display')}
+  ];
+}
+/* 书架初始化 */
+$('#launcher').innerHTML='<svg width="20" height="20" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2" fill="none" stroke="currentColor" stroke-width="2.1"/><circle class="ldot" cx="12" cy="12" r="3.6" fill="currentColor"/></svg>';
+$('#sh-iri').innerHTML=IRI(32);$('#sh-files').innerHTML=appIcon(APPS[1],32);$('#sh-set').innerHTML=appIcon(APPS[2],32);
 $('#launcher').onclick=toggleLauncher;
+$('#datetray').onclick=()=>window.toggleCal?toggleCal():toggleQS(true);
 $('#status').onclick=()=>toggleQS();
 $('#sh-iri').onclick=()=>{closeOS();if(!win.open)openWindow();else{win.min=!win.min;syncWin()}};
 $('#sh-files').onclick=()=>openApp('files');
 $('#sh-set').onclick=()=>{closeOS();const s=$('#osset'),b=$('#sh-set');if(!s){openOsSettings();return}if(!s._min&&b.classList.contains('act'))s._minFn();else s._focus()};
-const wallMenu=e=>{e.preventDefault();showMenu([{label:'设置壁纸和样式',icon:svg(P.edit,18),fn:()=>openOsSettings('personal')},{label:'显示器设置',icon:svg(P.bright,18),fn:()=>openOsSettings('display')},{label:'关于 IridiumOS',icon:svg(P.info,18),fn:()=>openOsSettings('about')}],e.clientX,e.clientY)};
+$('#sh-set').addEventListener('contextmenu',e=>{
+  e.preventDefault();e.stopPropagation();closeOS();
+  const s=$('#osset'),r=$('#sh-set').getBoundingClientRect(),ic=p=>svg(p,18);
+  showOsMenu([
+    {label:s&&!s._min?'最小化':'打开设置',icon:ic(P.gear),fn:()=>!s?openOsSettings():(!s._min?s._minFn():s._focus())},
+    s?{label:'关闭',icon:ic(P.close),fn:()=>{$('[data-x]',s).click()}}:null
+  ],r.left,r.top-6,true);
+});
+$('#sh-files').addEventListener('contextmenu',e=>{
+  e.preventDefault();e.stopPropagation();closeOS();
+  const r=$('#sh-files').getBoundingClientRect();
+  showOsMenu([{label:'打开文件',icon:svg(P.folder,18),fn:()=>openApp('files')}],r.left,r.top-6,true);
+});
+const wallMenu=e=>{if(e.target.closest('button'))return;e.preventDefault();closeOS();showOsMenu(shelfBgMenuItems(),e.clientX,e.clientY,e.currentTarget&&e.currentTarget.id==='shelf')};
 $('#desktop').addEventListener('contextmenu',wallMenu);
 $('#shelf').addEventListener('contextmenu',wallMenu);
 
 /* ---- 水波/状态层 (ink drop) 与置物架图标弹跳 ---- */
 (function(){
-  const SEL='.tb,.ts-btn,#omnibox .ob,.tclose,#winctl button,#shelf .sbtn,.qc,#status';
+  const SEL='.tb,.ts-btn,#omnibox .ob,.tclose,#winctl button,#shelf .sbtn,.qc,#status,#datetray';
   document.addEventListener('pointerdown',e=>{
     if(e.button!==0||!e.target.closest)return;
     const b=e.target.closest(SEL);if(!b||b.disabled)return;
@@ -4074,12 +4146,13 @@ render();
     }
   });
 
-  /* ---------- 置物架：窗口列表 / 右键菜单 ---------- */
+  /* ---------- 书架：窗口列表 / 右键菜单 ---------- */
   window.updateShelf=function(){
     const s=$('#sh-iri');if(!s)return;
     s.classList.toggle('run',wins.length>0);
     s.classList.toggle('act',wins.some(w=>w.id===focus&&!w.min));
     s.dataset.tt=wins.length>1?'Iridium（'+wins.length+' 个窗口）':'Iridium';
+    syncShelf();
   };
   const trunc=(s,n)=>{s=String(s||'');return s.length>n?s.slice(0,n-1)+'…':s};
   function shelfMenu(){
@@ -4094,7 +4167,7 @@ render();
       wins.length?{label:'窗口概览',icon:ic(P.full),key:'Ctrl+Alt+W',fn:toggleOv}:null,
       wins.length?'-':null,
       wins.length?{label:wins.length>1?'关闭所有窗口':'关闭窗口',icon:ic(P.close),fn:()=>[...wins].forEach(x=>closeWin(x))}:null);
-    showMenu(items,r.left,r.top-4);
+    showOsMenu(items,r.left,r.top-6,true);
   }
   $('#sh-iri').onclick=()=>{
     closeOS();
@@ -4107,15 +4180,7 @@ render();
   document.addEventListener('contextmenu',e=>{
     if(e.target.id!=='desktop')return;
     e.preventDefault();e.stopPropagation();closeOS();
-    const ic=p=>svg(p,18);
-    showMenu([
-      {label:'新建窗口',icon:ic(P.win),key:'Ctrl+N',fn:()=>WM.newWindow(false)},
-      {label:'新建无痕窗口',icon:ic(P.inc),key:'Ctrl+Shift+N',fn:()=>WM.newWindow(true)},
-      wins.length?{label:'窗口概览',icon:ic(P.full),key:'Ctrl+Alt+W',fn:toggleOv}:null,'-',
-      {label:'设置壁纸和样式',icon:ic(P.edit),fn:()=>openOsSettings('personal')},
-      {label:'显示器设置',icon:ic(P.bright),fn:()=>openOsSettings('display')},
-      {label:'关于 IridiumOS',icon:ic(P.info),fn:()=>openOsSettings('about')}
-    ],e.clientX,e.clientY);
+    showOsMenu(shelfBgMenuItems(),e.clientX,e.clientY);
   },true);
 
   /* ---------- 桌面级快捷键 / 点击桌面使窗口变为非活动 ---------- */
