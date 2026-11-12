@@ -713,3 +713,38 @@ test('shelf centers hotseat apps, rounds corners when unmaximized, and splits da
   await frame.locator('#wmax').click();
   await page.waitForFunction(() => getComputedStyle(document.querySelector('#shelf')).borderTopLeftRadius === '24px');
 });
+
+test('quick settings, calendar bubble, OS settings, launcher icons and lock shelf match ChromeOS', async t => {
+  const { page } = await desktop(t);
+  await page.locator('#status').click();
+  const qsInfo = await page.evaluate(() => {
+    const qt = getComputedStyle(document.querySelector('#qs .qt'));
+    const sl = document.querySelector('#qs .qsl');
+    const pill = document.querySelector('#qs .qpill');
+    return { radius: qt.borderTopLeftRadius, sliderH: sl.offsetHeight, pillH: pill.offsetHeight };
+  });
+  assert.equal(qsInfo.radius, '16px');
+  assert.equal(qsInfo.sliderH, 36);
+  assert.ok(qsInfo.pillH <= 36, 'sign-out pill must stay single-line');
+
+  await page.locator('#datetray').click();
+  await page.locator('#calbub').waitFor({ state: 'visible' });
+  assert.equal(await page.locator('#qs').count(), 0);
+  assert.equal(await page.locator('#calbub .qtoday').textContent(), '今天');
+
+  await page.evaluate(() => openOsSettings('personal'));
+  const osInfo = await page.evaluate(() => ({
+    bg: getComputedStyle(document.querySelector('#osset')).backgroundColor,
+    hasSearch: !!document.querySelector('#osset .ossearch input'),
+    galleryNotBm: APPS.find(a => a.id === 'photos').ic !== P.bm,
+    setBlue: APPS.find(a => a.id === 'set').bg === '#1967d2',
+  }));
+  assert.doesNotMatch(osInfo.bg, /rgba\(/);
+  assert.equal(osInfo.hasSearch, true);
+  assert.equal(osInfo.galleryNotBm, true);
+  assert.equal(osInfo.setBlue, true);
+
+  await page.evaluate(() => lockScreen());
+  assert.equal(await page.locator('#lock .lshelf [data-lp="off"]').isVisible(), true);
+  assert.equal(await page.locator('#lock .lshelf .lstat').isVisible(), true);
+});
