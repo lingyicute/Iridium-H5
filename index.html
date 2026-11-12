@@ -398,76 +398,97 @@ body.fs #shelf{display:none}
 .menu.osmenu .mi .ic,.menu.osmenu .mi .k{color:var(--os2)}
 .menu.osmenu .mi.hl,.menu.osmenu .mi:hover{background:var(--shelf-hov)}
 .menu.osmenu .ms{background:var(--osline)}
-/* 启动器 / 快速设置气泡 */
-.osb{position:fixed;z-index:3100;background:var(--osb);color:var(--osfg);border-radius:24px;box-shadow:0 0 0 1px rgba(0,0,0,.1),0 8px 32px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);animation:osup .16s cubic-bezier(.2,.8,.2,1);user-select:none}
+/* 启动器 / 快速设置 / 日历气泡 (ChromeOS Material You / Jelly) */
+.osb{position:fixed;z-index:3100;background:var(--osb);color:var(--osfg);border-radius:24px;box-shadow:0 0 0 1px var(--osline),0 8px 32px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);animation:osup .16s cubic-bezier(.2,.8,.2,1);user-select:none}
 @keyframes osup{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
-#qs{right:8px;bottom:56px;width:372px;padding:16px}
-.qhead{display:flex;align-items:center;margin:0 4px 12px}
+#qs,#calbub{right:8px;bottom:56px;width:376px;padding:16px}
+.qhead{display:flex;align-items:center;gap:6px;margin:0 4px 12px}
 .qhead b{font-size:16px;font-weight:500;flex:1}
-.qdate{height:36px;padding:0 14px;border-radius:18px;font-size:14px;font-weight:500;margin-bottom:12px;color:var(--osfg)}
-.qdate:hover{background:var(--shelf-hov)}
+.qtoday{height:30px;padding:0 12px;border-radius:15px;background:var(--ostile);color:var(--osfg);font-size:12px;font-weight:500;white-space:nowrap}
+.qtoday:hover{filter:brightness(.95)}
 .qtiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.qt{display:flex;align-items:center;gap:10px;height:62px;padding:0 10px 0 8px;border-radius:31px;background:var(--ostile);color:var(--osfg);text-align:left;min-width:0}
+.qt{display:flex;align-items:center;gap:12px;height:62px;padding:0 12px 0 14px;border-radius:16px;background:var(--ostile);color:var(--osfg);text-align:left;min-width:0;transition:background-color .14s,color .14s}
 .qt:hover{filter:brightness(.96)}
-.qt .qi{width:40px;height:40px;border-radius:50%;background:rgba(128,128,128,.22);display:flex;align-items:center;justify-content:center;flex:none}
+body.osdark .qt:hover{filter:brightness(1.08)}
+.qt .qi{width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex:none}
 .qt.on{background:var(--osacc);color:var(--osaccfg)}
-.qt.on .qi{background:color-mix(in srgb,currentColor 20%,transparent)}
-.qt .qx{display:flex;flex-direction:column;min-width:0}
+.qt .qx{display:flex;flex-direction:column;min-width:0;flex:1}
 .qt b{font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.qt i{font-style:normal;font-size:12px;opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.qsl{display:flex;align-items:center;gap:12px;margin-top:10px;height:44px;padding:0 16px;border-radius:22px;background:var(--ostile)}
-.qsl input{flex:1;accent-color:var(--osacc);height:4px;min-width:0}
-.qbot{display:flex;align-items:center;gap:8px;margin-top:14px}
-.qc{width:40px;height:40px;border-radius:50%;background:var(--ostile);display:flex;align-items:center;justify-content:center;color:var(--osfg);flex:none}
+.qt i{font-style:normal;font-size:11.5px;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* ChromeOS QuickSettingsSlider：36px 胶囊填充滑块，图标内嵌左侧 */
+.qsl{position:relative;display:flex;align-items:center;margin-top:12px;height:36px;border-radius:18px;background:var(--ostile);overflow:hidden}
+.qsl::before{content:'';position:absolute;left:0;top:0;bottom:0;width:calc(36px + (100% - 36px) * var(--p,100) / 100);background:var(--osacc);border-radius:18px;pointer-events:none;transition:background-color .12s}
+.qsl.muted::before{background:rgba(128,128,128,.36)}
+.qsl .qsi{position:relative;z-index:2;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--osaccfg);flex:none}
+.qsl.muted .qsi{color:var(--osfg)}
+.qsl button.qsi:hover{background:rgba(0,0,0,.08)}
+.qsl input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:1}
+.qbot{display:flex;align-items:center;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid var(--osline)}
+.qc{width:34px;height:34px;border-radius:50%;background:var(--ostile);display:flex;align-items:center;justify-content:center;color:var(--osfg);flex:none}
 .qc:hover,.qpill:hover{filter:brightness(.95)}
-.qpill{height:40px;padding:0 16px;border-radius:20px;background:var(--ostile);font-weight:500;color:var(--osfg)}
-.qbat{font-size:12px;color:var(--os2);margin:0 4px;white-space:nowrap}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;padding:0 4px 4px}
+body.osdark .qc:hover,body.osdark .qpill:hover{filter:brightness(1.1)}
+.qpill{height:34px;padding:0 14px;border-radius:17px;background:var(--ostile);font-size:12.5px;font-weight:500;color:var(--osfg);white-space:nowrap;flex:none}
+.qbat{font-size:12px;color:var(--os2);margin:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;padding:0 2px 2px}
 .cal span{height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:13px}
-.cal .th{color:var(--os2);font-size:12px}
-.cal .td{background:var(--osacc);color:var(--osaccfg)}
-#lc{left:8px;bottom:56px;width:min(580px,calc(100vw - 16px));padding:20px 20px 24px;border-radius:28px}
-.lsearch{display:flex;align-items:center;gap:12px;height:48px;border-radius:24px;background:var(--ostile);padding:0 16px;color:var(--os2)}
-.lsearch input{flex:1;background:none;border:0;font-size:15px;color:var(--osfg);user-select:text}
+.cal .th{color:var(--os2);font-size:12px;font-weight:500}
+.cal .td{background:var(--osacc);color:var(--osaccfg);font-weight:500}
+#lc{left:8px;bottom:56px;width:min(544px,calc(100vw - 16px));padding:16px 20px 22px;border-radius:24px}
+.lsearch{display:flex;align-items:center;gap:12px;height:44px;border-radius:22px;background:var(--ostile);padding:0 16px;color:var(--os2)}
+.lsearch input{flex:1;background:none;border:0;font-size:14px;color:var(--osfg);user-select:text}
 .lsearch input::placeholder{color:var(--os2)}
-.lh{margin:18px 8px 8px;font-size:13px;color:var(--os2)}
-.lgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;min-height:130px;align-content:start}
-.lapp{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border-radius:12px;font-size:12px;color:var(--osfg)}
+.lh{margin:16px 8px 8px;font-size:12px;font-weight:500;color:var(--os2)}
+.lgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;min-height:130px;align-content:start}
+.lapp{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border-radius:14px;font-size:12px;color:var(--osfg)}
 .lapp:hover{background:var(--shelf-hov)}
-/* 设置 */
-#osset{position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);width:min(880px,94vw);height:min(580px,78vh);z-index:2000;border-radius:12px;background:var(--osb);color:var(--osfg);box-shadow:0 0 0 1px rgba(0,0,0,.2),0 16px 48px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden;user-select:none;animation:wopen .18s cubic-bezier(.2,.8,.2,1)}
+.lapp .aic,.lapp .iri{box-shadow:0 1px 3px rgba(0,0,0,.22)}
+/* 系统设置 (ChromeOS Jelly Settings SWA：不透明底色 + 白色/深灰抬升卡片 + 顶栏搜索) */
+#osset{--oss-bg:#eef1f8;--oss-card:#fff;position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);width:min(900px,94vw);height:min(580px,78vh);z-index:2000;border-radius:12px;background:var(--oss-bg);color:var(--osfg);box-shadow:0 0 0 1px rgba(0,0,0,.2),0 16px 48px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden;user-select:none;animation:wopen .18s cubic-bezier(.2,.8,.2,1)}
+body.osdark #osset{--oss-bg:#1b1c20;--oss-card:#282a2f}
 #osset.max{left:0!important;top:0!important;width:100%!important;height:calc(100% - 48px)!important;transform:none!important;border-radius:0;box-shadow:none}
 #osset.blur{box-shadow:0 0 0 1px rgba(0,0,0,.14),0 6px 22px rgba(0,0,0,.28)}
 body.ov #osset{opacity:0;pointer-events:none}
-#osset .osh{height:48px;display:flex;align-items:center;gap:2px;padding:0 8px 0 20px;font-size:15px;font-weight:500;flex:none}
+#osset .osh{height:52px;display:flex;align-items:center;gap:4px;padding:0 8px 0 20px;font-size:16px;font-weight:500;flex:none}
+#osset .ostitle{min-width:140px}
+#osset .ossearch{flex:1;max-width:340px;margin:0 auto;height:36px;border-radius:18px;background:var(--oss-card);display:flex;align-items:center;gap:8px;padding:0 14px;color:var(--os2);box-shadow:0 1px 2px rgba(0,0,0,.05)}
+#osset .ossearch:focus-within{box-shadow:inset 0 0 0 2px var(--osacc)}
+#osset .ossearch input{flex:1;min-width:0;background:none;border:0;font-size:13px;color:var(--osfg);user-select:text}
+#osset .ossearch input::placeholder{color:var(--os2)}
 #osset .osh .qc{width:32px;height:32px;background:none}
 #osset .osh .qc:hover{background:var(--shelf-hov)}
 #osset .osm{flex:1;display:flex;min-height:0}
-#osset nav{width:230px;padding:6px 8px;flex:none}
-#osset nav a{display:flex;align-items:center;gap:14px;height:44px;padding:0 16px;border-radius:22px;font-size:14px;color:var(--osfg);text-decoration:none}
+#osset nav{width:232px;padding:6px 12px 12px 8px;flex:none}
+#osset nav a{display:flex;align-items:center;gap:14px;height:42px;padding:0 16px;border-radius:21px;font-size:14px;font-weight:500;color:var(--osfg);text-decoration:none}
 #osset nav a:hover{background:var(--shelf-hov)}
 #osset nav a.on{background:var(--osacc);color:var(--osaccfg)}
 #osset main{flex:1;overflow:auto;padding:4px 28px 28px}
-#osset h2{font-size:22px;font-weight:400;margin:6px 0 16px}
+#osset h2{font-size:20px;font-weight:500;margin:6px 0 16px}
 #osset h4{font-size:13px;font-weight:500;color:var(--os2);margin:20px 0 8px}
-.oscard{background:var(--ostile);border-radius:16px;overflow:hidden}
+.oscard{background:var(--oss-card);border-radius:16px;overflow:hidden;box-shadow:0 1px 2px rgba(0,0,0,.05)}
 .osrow{display:flex;align-items:center;gap:16px;padding:14px 20px;min-height:58px;border-top:1px solid var(--osline)}
 .osrow:first-child{border-top:0}
 .osrow .stx{flex:1}.osrow .st{font-size:14px}.osrow .sd{font-size:12px;color:var(--os2);margin-top:2px}
 #osset .sw input:checked+span{background:var(--osacc)}
 #osset .sw input:checked+span::before{background:var(--osaccfg)}
-.oseg{display:flex;gap:8px}
-.oseg button{height:36px;padding:0 20px;border-radius:18px;border:1px solid var(--osline);font-size:13px;color:var(--osfg)}
-.oseg button.on{background:var(--osacc);color:var(--osaccfg);border-color:transparent}
-.wpg{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:12px}
-.wpg button{height:76px;border-radius:12px;border:3px solid transparent;color:#fff;font-size:12px;text-shadow:0 1px 3px rgba(0,0,0,.6);display:flex;align-items:flex-end;padding:6px 8px;outline:1px solid var(--osline)}
+.oseg{display:flex;gap:8px;background:var(--oss-card);padding:6px;border-radius:24px;width:fit-content}
+.oseg button{height:34px;padding:0 20px;border-radius:17px;border:0;font-size:13px;font-weight:500;color:var(--osfg)}
+.oseg button:hover:not(.on){background:var(--shelf-hov)}
+.oseg button.on{background:var(--osacc);color:var(--osaccfg)}
+.wpg{display:grid;grid-template-columns:repeat(auto-fill,minmax(126px,1fr));gap:12px}
+.wpg button{height:78px;border-radius:14px;border:3px solid transparent;color:#fff;font-size:12px;text-shadow:0 1px 3px rgba(0,0,0,.6);display:flex;align-items:flex-end;padding:6px 10px;outline:1px solid var(--osline)}
 .wpg button.on{border-color:var(--osacc)}
-/* 锁屏 / 关机 */
+/* 锁屏 / 关机 (ChromeOS LockScreenView + LoginShelfView) */
 #lock{position:fixed;inset:0;z-index:9000;color:#fff;overflow:hidden;animation:wopen .25s ease-out}
-#lock .lbg{position:absolute;inset:-40px;filter:blur(24px) brightness(.62)}
-#lock .lt{position:absolute;left:0;right:0;top:12vh;text-align:center;font-size:16px}
-#lock .lt .tm{font-size:72px;font-weight:300;line-height:1.1}
-#lock .lc{position:absolute;left:50%;top:56%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:12px}
+#lock .lbg{position:absolute;inset:-40px;filter:blur(28px) brightness(.58)}
+#lock .lt{position:absolute;left:0;right:0;top:13vh;text-align:center;font-size:15px;opacity:.92}
+#lock .lt .tm{font-size:64px;font-weight:300;line-height:1.1;letter-spacing:-.5px}
+#lock .lc{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:14px}
+#lock .lubtn{height:38px;padding:0 22px;border-radius:19px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.26);color:#fff;font-size:13px;font-weight:500;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transition:background-color .14s}
+#lock .lubtn:hover,#lock .lubtn:focus-visible{background:rgba(255,255,255,.28);outline:2px solid #a8c7fa;outline-offset:2px}
+#lock .lshelf{position:absolute;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 8px}
+#lock .lpills{display:flex;align-items:center;gap:6px}
+#lock .lpill,#lock .lstat{height:36px;padding:0 14px;border-radius:18px;background:rgba(255,255,255,.14);color:#fff;font-size:13px;font-weight:500;display:flex;align-items:center;gap:8px;-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px)}
+#lock .lpill:hover{background:rgba(255,255,255,.24)}
 #poff{position:fixed;inset:0;z-index:9500;background:#000;color:#9aa0a6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;font-size:16px}
 #dim{position:fixed;inset:0;background:#000;pointer-events:none;z-index:9800;opacity:0}
 #night{position:fixed;inset:0;background:rgb(255,150,50);mix-blend-mode:multiply;pointer-events:none;z-index:9700;opacity:0;transition:opacity .3s}
@@ -2746,13 +2767,14 @@ document.addEventListener('mousemove',e=>{
 });
 
 /* 应用 */
-const APPS=[{id:'iri',n:'Iridium',k:'browser chrome'},{id:'files',n:'文件',k:'files',ic:P.folder,bg:'#1a73e8'},{id:'set',n:'设置',k:'settings',ic:P.gear,bg:'#5f6368'},{id:'cam',n:'相机',k:'camera',ic:P.cam,bg:'#d93025'},{id:'cal',n:'日历',k:'calendar',ic:P.cal,bg:'#1a73e8'},{id:'photos',n:'图库',k:'photos gallery',ic:P.bm,bg:'#f29900'}];
-const appIcon=(a,s=44)=>a.id==='iri'?IRI(s):`<span class="aic" style="width:${s}px;height:${s}px;background:${a.bg}">${svg(a.ic,Math.round(s*.55))}</span>`;
+P.photo='M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z';
+const APPS=[{id:'iri',n:'Iridium',k:'browser chrome'},{id:'files',n:'文件',k:'files',ic:P.folder,bg:'#1a73e8'},{id:'set',n:'设置',k:'settings',ic:P.gear,bg:'#1967d2'},{id:'cam',n:'相机',k:'camera',ic:P.cam,bg:'#d93025'},{id:'cal',n:'日历',k:'calendar',ic:P.cal,bg:'#1a73e8'},{id:'photos',n:'图库',k:'photos gallery',ic:P.photo,bg:'#f29900'}];
+const appIcon=(a,s=48)=>a.id==='iri'?IRI(s):`<span class="aic" style="width:${s}px;height:${s}px;background:${a.bg}">${svg(a.ic,Math.round(s*.54))}</span>`;
 function openApp(id){
   closeOS();
   if(id==='iri')WM.open()
   else if(id==='set')openOsSettings();
-  else if(id==='cal')toggleQS(true);
+  else if(id==='cal')toggleCal();
   else toast(((APPS.find(a=>a.id===id)||{}).n||'该应用')+'：此演示环境中暂不可用');
 }
 function updateShelf(){const s=$('#sh-iri');if(!s)return;s.classList.toggle('run',win.open);s.classList.toggle('act',win.open&&!win.min);syncShelf()}
@@ -2767,12 +2789,12 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOS()});
 /* 启动器 */
 function toggleLauncher(){
   if(osOpen==='lc'){closeOS();return}
-  closeOS();closePopups();osOpen='lc';$('#launcher').classList.add('lon');
-  const b=el(`<div class="osb" id="lc"><div class="lsearch">${svg(P.search,22)}<input placeholder="搜索您的设备、应用、设置和网络" spellcheck="false"></div><div class="lh">应用</div><div class="lgrid"></div></div>`);
+  closeOS();closePopups();osOpen='lc';$('#launcher').classList.add('lon');syncShelf();
+  const b=el(`<div class="osb" id="lc"><div class="lsearch">${svg(P.search,20)}<input placeholder="搜索您的设备、应用、设置和网络" spellcheck="false"></div><div class="lh">应用</div><div class="lgrid"></div></div>`);
   document.body.append(b);
   const g=$('.lgrid',b),inp=$('input',b);
   const match=q=>APPS.filter(a=>!q||a.n.toLowerCase().includes(q)||(a.k&&a.k.includes(q)));
-  const draw=()=>{const q=inp.value.trim().toLowerCase();g.innerHTML=match(q).map(a=>`<button class="lapp" data-a="${a.id}">${appIcon(a)}<span>${esc(a.n)}</span></button>`).join('')||`<div style="grid-column:1/-1;padding:28px 0;text-align:center;color:var(--os2)">按 Enter 键在网络上搜索“${esc(inp.value)}”</div>`};
+  const draw=()=>{const q=inp.value.trim().toLowerCase();g.innerHTML=match(q).map(a=>`<button class="lapp" data-a="${a.id}">${appIcon(a,48)}<span>${esc(a.n)}</span></button>`).join('')||`<div style="grid-column:1/-1;padding:28px 0;text-align:center;color:var(--os2)">按 Enter 键在网络上搜索“${esc(inp.value)}”</div>`};
   draw();inp.oninput=draw;inp.focus();
   inp.onkeydown=e=>{
     if(e.key==='Enter'&&inp.value.trim()){const v=inp.value.trim(),m=match(v.toLowerCase());if(m.length&&!looksLikeUrl(v))openApp(m[0].id);else{closeOS();WM.openUrl(v)}}
@@ -2780,14 +2802,44 @@ function toggleLauncher(){
   b.onclick=e=>{const a=e.target.closest('[data-a]');if(a)openApp(a.dataset.a)};
 }
 
-/* 快速设置 */
+/* 独立日历气泡 (ChromeOS CalendarView：上下月箭头 + 今天胶囊) */
 let calM=null;
+function toggleCal(){
+  if(osOpen==='cal'){closeOS();return}
+  closeOS();closePopups();osOpen='cal';const dt=$('#datetray');dt&&dt.classList.add('on');syncShelf();
+  const b=el('<div class="osb" id="calbub" tabindex="-1" role="dialog" aria-label="日历"></div>');document.body.append(b);
+  calM=new Date();drawCal(b);b.focus();
+  b.addEventListener('click',e=>{
+    const a=e.target.closest('[data-a]');if(!a)return;
+    const k=a.dataset.a;
+    if(k==='today'){calM=new Date();drawCal(b)}
+    else if(k==='prev'){calM=new Date(calM.getFullYear(),calM.getMonth()-1,1);drawCal(b)}
+    else if(k==='next'){calM=new Date(calM.getFullYear(),calM.getMonth()+1,1);drawCal(b)}
+  });
+}
+function drawCal(b){
+  const y=calM.getFullYear(),m=calM.getMonth(),first=new Date(y,m,1).getDay(),n=new Date(y,m+1,0).getDate(),td=new Date();
+  let c='';['日','一','二','三','四','五','六'].forEach(x=>c+=`<span class="th">${x}</span>`);
+  for(let i=0;i<first;i++)c+='<span></span>';
+  for(let d=1;d<=n;d++)c+=`<span class="${td.getFullYear()===y&&td.getMonth()===m&&td.getDate()===d?'td':''}">${d}</span>`;
+  b.innerHTML=`<div class="qhead"><b>${y}年${m+1}月</b><button class="qtoday" data-a="today">今天</button><button class="qc" data-a="prev" title="上个月">${svg(P.up,18)}</button><button class="qc" data-a="next" title="下个月">${svg(P.down,18)}</button></div><div class="cal">${c}</div>`;
+}
+
+/* 快速设置 (ChromeOS Material You QsRevamp) */
 function toggleQS(cal){
-  if(osOpen==='qs'&&!cal){closeOS();return}
-  closeOS();closePopups();osOpen='qs';$('#status').classList.add('on');
+  if(cal){toggleCal();return}
+  if(osOpen==='qs'){closeOS();return}
+  closeOS();closePopups();osOpen='qs';$('#status').classList.add('on');syncShelf();
   const b=el('<div class="osb" id="qs" tabindex="-1" role="dialog" aria-label="快速设置"></div>');document.body.append(b);
-  calM=cal?new Date():null;drawQS(b);b.focus();
-  b.addEventListener('input',e=>{const k=e.target.dataset.s;if(!k)return;OS[k]=+e.target.value;if(k==='vol'){if(OS.vol>0)OS._vol=OS.vol;const vi=$('[data-m=vol]',b);if(vi)vi.innerHTML=svg(OS.vol?P.vol:P.volOff,20)}saveOS();applyOS()});
+  drawQS(b);b.focus();
+  b.addEventListener('input',e=>{
+    const k=e.target.dataset.s;if(!k)return;
+    OS[k]=+e.target.value;
+    const sl=e.target.closest('.qsl');
+    if(k==='bright'&&sl)sl.style.setProperty('--p',Math.round((OS.bright-20)/80*100));
+    if(k==='vol'){if(OS.vol>0)OS._vol=OS.vol;if(sl){sl.style.setProperty('--p',OS.vol);sl.classList.toggle('muted',!OS.vol)}const vi=$('[data-m=vol]',b);if(vi)vi.innerHTML=svg(OS.vol?P.vol:P.volOff,20)}
+    saveOS();applyOS();
+  });
   b.addEventListener('click',e=>{
     if(e.target.closest('[data-m=vol]')){if(OS.vol>0){OS._vol=OS.vol;OS.vol=0}else OS.vol=OS._vol||70;saveOS();applyOS();drawQS(b);return}
     const T=e.target.closest('[data-t]');
@@ -2799,10 +2851,7 @@ function toggleQS(cal){
     }
     const a=e.target.closest('[data-a]');if(!a)return;
     const k=a.dataset.a;
-    if(k==='cal'){calM=new Date();drawQS(b)}
-    else if(k==='back'){calM=null;drawQS(b)}
-    else if(k==='prev'){calM=new Date(calM.getFullYear(),calM.getMonth()-1,1);drawQS(b)}
-    else if(k==='next'){calM=new Date(calM.getFullYear(),calM.getMonth()+1,1);drawQS(b)}
+    if(k==='cal')toggleCal();
     else if(k==='lock')lockScreen();
     else if(k==='signout')lockScreen(true);
     else if(k==='power')powerOff();
@@ -2810,31 +2859,30 @@ function toggleQS(cal){
   });
 }
 function drawQS(b){
-  if(calM){
-    const y=calM.getFullYear(),m=calM.getMonth(),first=new Date(y,m,1).getDay(),n=new Date(y,m+1,0).getDate(),td=new Date();
-    let c='';['日','一','二','三','四','五','六'].forEach(x=>c+=`<span class="th">${x}</span>`);
-    for(let i=0;i<first;i++)c+='<span></span>';
-    for(let d=1;d<=n;d++)c+=`<span class="${td.getFullYear()===y&&td.getMonth()===m&&td.getDate()===d?'td':''}">${d}</span>`;
-    b.innerHTML=`<div class="qhead"><b>${y}年${m+1}月</b><button class="qc" data-a="prev" title="上个月">${svg(P.back,18)}</button><button class="qc" data-a="next" style="margin-left:6px" title="下个月">${svg(P.fwd,18)}</button><button class="qc" data-a="back" style="margin-left:6px" title="返回">${svg(P.close,18)}</button></div><div class="cal">${c}</div>`;
-    return;
-  }
-  const tile=(k,ic,l,s,on)=>`<button class="qt${on?' on':''}" data-t="${k}"><span class="qi">${svg(ic,20)}</span><span class="qx"><b>${l}</b><i>${s}</i></span></button>`;
-  b.innerHTML=`<button class="qdate" data-a="cal">${dateStr()}</button>
-  <div class="qtiles">${tile('wifi',P.wifi,'网络',OS.wifi?'Iridium-5G':'已关闭',OS.wifi)}${tile('bt',P.bt,'蓝牙',OS.bt?'已开启':'已关闭',OS.bt)}${tile('dnd',P.dnd,'勿扰模式',OS.dnd?'已开启':'已关闭',OS.dnd)}${tile('dark',P.moon,'深色主题',isOsDark()?'已开启':'已关闭',isOsDark())}${tile('night',P.sun,'夜间模式',OS.night?'已开启':'已关闭',OS.night)}${tile('shot',P.cam,'屏幕截图','',false)}</div>
-  <div class="qsl">${svg(P.bright,20)}<input type="range" min="20" max="100" value="${OS.bright}" data-s="bright" aria-label="亮度"></div>
-  <div class="qsl"><button data-m="vol" title="${OS.vol?'静音':'取消静音'}" style="display:flex">${svg(OS.vol?P.vol:P.volOff,20)}</button><input type="range" min="0" max="100" value="${OS.vol}" data-s="vol" aria-label="音量"></div>
-  <div class="qbot"><button class="qpill" data-a="signout">退出登录</button><button class="qc" data-a="lock" title="锁定">${svg(P.lock,20)}</button><button class="qc" data-a="power" title="关机">${svg(P.power,20)}</button><span style="flex:1"></span><span class="qbat">${BAT.l}%${BAT.c?' · 已接通电源':''}</span><button class="qc" data-a="set" title="设置">${svg(P.gear,20)}</button></div>`;
+  const tile=(k,ic,l,s,on)=>`<button class="qt${on?' on':''}" data-t="${k}"><span class="qi">${svg(ic,20)}</span><span class="qx"><b>${l}</b>${s?`<i>${s}</i>`:''}</span></button>`;
+  const bp=Math.round((OS.bright-20)/80*100);
+  b.innerHTML=`<div class="qtiles">${tile('wifi',P.wifi,'网络',OS.wifi?'Iridium-5G':'已关闭',OS.wifi)}${tile('bt',P.bt,'蓝牙',OS.bt?'已开启':'已关闭',OS.bt)}${tile('dnd',P.dnd,'勿扰模式',OS.dnd?'已开启':'已关闭',OS.dnd)}${tile('dark',P.moon,'深色主题',isOsDark()?'已开启':'已关闭',isOsDark())}${tile('night',P.sun,'夜间模式',OS.night?'已开启':'已关闭',OS.night)}${tile('shot',P.cam,'屏幕截图','选取或截取全屏',false)}</div>
+  <div class="qsl" style="--p:${bp}"><span class="qsi">${svg(P.bright,20)}</span><input type="range" min="20" max="100" value="${OS.bright}" data-s="bright" aria-label="亮度"></div>
+  <div class="qsl${OS.vol?'':' muted'}" style="--p:${OS.vol}"><button class="qsi" data-m="vol" title="${OS.vol?'静音':'取消静音'}">${svg(OS.vol?P.vol:P.volOff,20)}</button><input type="range" min="0" max="100" value="${OS.vol}" data-s="vol" aria-label="音量"></div>
+  <div class="qbot"><button class="qpill" data-a="signout">退出登录</button><button class="qc" data-a="lock" title="锁定">${svg(P.lock,18)}</button><button class="qc" data-a="power" title="关机">${svg(P.power,18)}</button><span style="flex:1"></span><span class="qbat">${BAT.l}%${BAT.c?' · 充电中':''}</span><button class="qc" data-a="set" title="设置">${svg(P.gear,18)}</button></div>`;
 }
 
 /* 锁屏 / 关机 */
 function lockScreen(signedOut){
   closeOS();if($('#lock'))return;closePopups();hideSugg();hideHC();document.body.classList.add('locked');
   try{if(document.activeElement)document.activeElement.blur();window.focus()}catch(e){}
-  const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lt"><div class="tm">${hhmm()}</div><div>${dateStr()}</div></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:18px">User</div><button class="btn pri" style="color:#fff">${signedOut?'点击或按 Enter 键登录':'点击或按 Enter 键解锁'}</button></div></div>`);
-  document.body.append(d);$('button',d).focus();
+  const wf=netOn();
+  const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lt"><div class="tm">${hhmm()}</div><div>${dateStr()}</div></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:20px;font-weight:500">User</div><button class="lubtn">${signedOut?'点击或按 Enter 键登录':'点击或按 Enter 键解锁'}</button></div><div class="lshelf"><div class="lpills"><button class="lpill" data-lp="off">${svg(P.power,18)}<span>关机</span></button>${signedOut?'':`<button class="lpill" data-lp="out"><span>退出登录</span></button>`}</div><div class="lstat"><span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span>${hhmm()}</span></div></div></div>`);
+  document.body.append(d);$('.lubtn',d).focus();
   const un=()=>{d.remove();document.body.classList.remove('locked');document.removeEventListener('keydown',kh,true)};
   const kh=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();un()}};
-  document.addEventListener('keydown',kh,true);d.onclick=un;
+  document.addEventListener('keydown',kh,true);
+  d.onclick=e=>{
+    const lp=e.target.closest('[data-lp]');
+    if(lp){e.stopPropagation();if(lp.dataset.lp==='off'){un();powerOff()}else{$('.lubtn',d).textContent='点击或按 Enter 键登录';lp.remove()}return}
+    if(e.target.closest('.lstat')){e.stopPropagation();return}
+    un();
+  };
 }
 function powerOff(){
   closeOS();
@@ -2845,30 +2893,31 @@ function powerOff(){
 /* 设置 */
 function openOsSettings(sec){
   if(EMB&&window.IWM){IWM.post('osset',{sec:sec||''});return}
-  const SEC=[['network','网络',P.wifi],['bt','蓝牙',P.bt],['personal','个性化',P.edit],['display','显示器',P.bright],['about','关于 IridiumOS',P.info]];
+  const SEC=[['network','网络',P.wifi,'wifi 无线 移动数据'],['bt','蓝牙',P.bt,'bluetooth 设备'],['personal','个性化',P.edit,'外观 浅色 深色 壁纸 主题'],['display','显示器',P.bright,'亮度 夜间模式 屏幕 蓝光 书架'],['about','关于 IridiumOS',P.info,'版本 浏览器 平台 设备 IridiumBook']];
   const valid=s=>SEC.some(x=>x[0]===s);
   const old=$('#osset');
   if(old){if(sec&&valid(sec))old._setSec(sec);old._focus();return}
-  let sc=valid(sec)?sec:'personal';
-  const icMax='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="2" y="2" width="8" height="8" rx="1.5"/></svg>';
-  const icRest='<svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><rect x="2" y="3.6" width="6.4" height="6.4" rx="1.3"/><path d="M4 3.6v-.4C4 2.4 4.6 1.8 5.4 1.8h3.4c.8 0 1.4.6 1.4 1.4v3.4c0 .8-.6 1.4-1.4 1.4h-.4"/></svg>';
-  const w=el(`<div id="osset"><div class="osh"><span style="flex:1">设置</span><button class="qc" data-min="1" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2 8.5h8"/></svg></button><button class="qc" data-max="1" title="最大化">${icMax}</button><button class="qc" data-x="1" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"><path d="M2.5 2.5l7 7m0-7l-7 7"/></svg></button></div><div class="osm"><nav></nav><main></main></div></div>`);
-  const nav=$('nav',w),main=$('main',w);
+  let sc=valid(sec)?sec:'personal',oq='';
+  const icMax='<svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M2 2v8h8V2H2zm6.6 6.6H3.4V3.4h5.2v5.2z"/></svg>';
+  const icRest='<svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M4 2v2H2v6h6V8h2V2H4zm4.6 4.6H8V4H5.4v-.6h3.2v3.2zM3.4 8.6V5.4h3.2v3.2H3.4z"/></svg>';
+  const w=el(`<div id="osset"><div class="osh"><span class="ostitle">设置</span><div class="ossearch">${svg(P.search,18)}<input placeholder="搜索设置" spellcheck="false" aria-label="搜索设置"></div><span style="flex:1;max-width:40px"></span><button class="qc" data-min="1" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12"><rect x="2" y="8.6" width="8" height="1.4" fill="currentColor"/></svg></button><button class="qc" data-max="1" title="最大化">${icMax}</button><button class="qc" data-x="1" title="关闭"><svg width="12" height="12" viewBox="0 0 12 12"><path fill="currentColor" d="M9.7 3.3L8.7 2.3 6 5 3.3 2.3l-1 1L5 6 2.3 8.7l1 1L6 7l2.7 2.7 1-1L7 6z"/></svg></button></div><div class="osm"><nav></nav><main></main></div></div>`);
+  const nav=$('nav',w),main=$('main',w),sinp=$('.ossearch input',w);
   const sw=(k,v)=>`<label class="sw"><input type="checkbox" data-o="${k}" ${v?'checked':''}><span></span></label>`;
   const row=(a,b,c)=>`<div class="osrow"><div class="stx"><div class="st">${a}</div>${b?`<div class="sd">${b}</div>`:''}</div><div>${c||''}</div></div>`;
-  const draw=()=>{
-    nav.innerHTML=SEC.map(s=>`<a data-s="${s[0]}" class="${s[0]===sc?'on':''}">${svg(s[2],20)}${s[1]}</a>`).join('');
-    let h='';
-    if(sc==='network')h=`<h2>网络</h2><div class="oscard">${row('Wi-Fi',OS.wifi?'已连接到 Iridium-5G':'已关闭',sw('wifi',OS.wifi))}${row('移动数据','未检测到 SIM 卡')}</div>`;
-    else if(sc==='bt')h=`<h2>蓝牙</h2><div class="oscard">${row('蓝牙',OS.bt?'正在搜索设备…':'已关闭',sw('bt',OS.bt))}</div>`;
-    else if(sc==='personal'){
-      const dm=OS.dark==null?'auto':OS.dark?'dark':'light';
-      h=`<h2>个性化</h2><h4>外观</h4><div class="oseg">${[['light','浅色'],['dark','深色'],['auto','自动']].map(x=>`<button data-dk="${x[0]}" class="${dm===x[0]?'on':''}">${x[1]}</button>`).join('')}</div><h4>壁纸</h4><div class="wpg">${WALLS.map((x,i)=>`<button data-w="${i}" class="${OS.wall===i?'on':''}" style="background:${x.c}">${x.n}</button>`).join('')}</div>`;
-    }
-    else if(sc==='display')h=`<h2>显示器</h2><div class="oscard">${row('亮度','',`<input type="range" min="20" max="100" value="${OS.bright}" data-r="bright" style="width:200px;accent-color:var(--osacc)">`)}${row('夜间模式','降低屏幕蓝光',sw('night',OS.night))}</div>`;
-    else h=`<h2>关于 IridiumOS</h2><div class="oscard"><div class="osrow" style="padding:24px 20px;gap:18px">${IRI(56)}<div class="stx"><div class="st" style="font-size:20px">IridiumOS</div><div class="sd">Made with love by lingyicute</div></div></div>${row('版本','16093.57.0（正式版本）稳定版渠道（64 位）')}${row('浏览器',`Iridium ${VERSION}`)}${row('平台','x86_64 · iframe 模式')}${row('设备名称','IridiumBook')}</div>`;
-    main.innerHTML=h;
+  const secHtml=id=>{
+    if(id==='network')return `<h2>网络</h2><div class="oscard">${row('Wi-Fi',OS.wifi?'已连接到 Iridium-5G':'已关闭',sw('wifi',OS.wifi))}${row('移动数据','未检测到 SIM 卡')}</div>`;
+    if(id==='bt')return `<h2>蓝牙</h2><div class="oscard">${row('蓝牙',OS.bt?'正在搜索设备…':'已关闭',sw('bt',OS.bt))}</div>`;
+    if(id==='personal'){const dm=OS.dark==null?'auto':OS.dark?'dark':'light';return `<h2>个性化</h2><h4>外观</h4><div class="oseg">${[['light','浅色'],['dark','深色'],['auto','自动']].map(x=>`<button data-dk="${x[0]}" class="${dm===x[0]?'on':''}">${x[1]}</button>`).join('')}</div><h4>壁纸</h4><div class="wpg">${WALLS.map((x,i)=>`<button data-w="${i}" class="${OS.wall===i?'on':''}" style="background:${x.c}">${x.n}</button>`).join('')}</div>`}
+    if(id==='display')return `<h2>显示器</h2><div class="oscard">${row('亮度','',`<input type="range" min="20" max="100" value="${OS.bright}" data-r="bright" style="width:200px;accent-color:var(--osacc)">`)}${row('夜间模式','降低屏幕蓝光',sw('night',OS.night))}${row('自动隐藏书架','打开窗口时自动收起底部书架',sw('autohide',!!OS.autohide))}</div>`;
+    return `<h2>关于 IridiumOS</h2><div class="oscard"><div class="osrow" style="padding:24px 20px;gap:18px">${IRI(56)}<div class="stx"><div class="st" style="font-size:20px">IridiumOS</div><div class="sd">Made with love by lingyicute</div></div></div>${row('版本','16093.57.0（正式版本）稳定版渠道（64 位）')}${row('浏览器',`Iridium ${VERSION}`)}${row('平台','x86_64 · iframe 模式')}${row('设备名称','IridiumBook')}</div>`;
   };
+  const draw=()=>{
+    nav.innerHTML=SEC.map(s=>`<a data-s="${s[0]}" class="${!oq&&s[0]===sc?'on':''}">${svg(s[2],20)}${s[1]}</a>`).join('');
+    if(!oq){main.innerHTML=secHtml(sc);return}
+    const ql=oq.toLowerCase(),ms=SEC.filter(s=>(s[1]+' '+s[3]).toLowerCase().includes(ql));
+    main.innerHTML=ms.length?ms.map(s=>secHtml(s[0])).join(''):`<div class="oscard"><div class="empty">找不到与“${esc(oq)}”匹配的设置</div></div>`;
+  };
+  sinp.oninput=()=>{oq=sinp.value.trim();draw()};
   const focusSelf=()=>{
     w._min=false;w.style.display='';w.style.zIndex=2000;w.classList.remove('blur');
     $('#sh-set').classList.add('run','act');
