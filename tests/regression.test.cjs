@@ -335,13 +335,15 @@ test('bookmark bar items are keyboard reachable and operable', async t => {
   }
 });
 
-test('the lock screen clock follows the real time', async t => {
+test('the lock screen has no oversized clock and its status clock follows the real time', async t => {
   const { page } = await desktop(t);
   await page.evaluate(() => lockScreen());
-  await page.evaluate(() => { document.querySelector('#lock .tm').textContent = '99:99'; document.querySelector('#lock .lt>div:not(.tm)').textContent = 'stale'; renderStatus(); });
-  const out = await page.evaluate(() => ({ tm: document.querySelector('#lock .tm').textContent, d: document.querySelector('#lock .lt>div:not(.tm)').textContent, now: hhmm() }));
+  assert.equal(await page.locator('#lock .lt').count(), 0);
+  await page.evaluate(() => { document.querySelector('#lock .lstat span:last-child').textContent = '99:99'; renderStatus(); });
+  const out = await page.evaluate(() => ({ tm: document.querySelector('#lock .lstat span:last-child').textContent, now: hhmm() }));
   assert.equal(out.tm, out.now);
-  assert.notEqual(out.d, 'stale');
+  const overscan = await page.evaluate(() => { const cs = getComputedStyle(document.querySelector('#lock .lbg')); return Math.min(...['left', 'top', 'right', 'bottom'].map(k => -parseFloat(cs[k]))); });
+  assert.ok(overscan >= 84, 'blurred backdrop must overscan so the shelf never shows through');
 });
 
 test('removing an in-progress download aborts it instead of saving it later', async t => {
