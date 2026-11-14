@@ -366,7 +366,9 @@ body{font-family:Roboto,"Google Sans","Noto Sans CJK SC","Noto Sans SC","Noto Sa
   --shelf:rgba(238,241,246,.78);--shelf-max:#e5e9f0;--shelf-fg:#1f1f1f;--shelf-hov:rgba(0,0,0,.08);--sttray:rgba(0,0,0,.06);--osb:rgba(246,248,252,.94);--osfg:#1f1f1f;--os2:#5f6368;--ostile:#dfe4ee;--osacc:#0b57d0;--osaccfg:#fff;--osline:rgba(0,0,0,.12)}
 body.osdark{--shelf:rgba(32,33,36,.74);--shelf-max:#202124;--shelf-fg:#e8eaed;--shelf-hov:rgba(255,255,255,.14);--sttray:rgba(255,255,255,.1);--osb:rgba(40,42,46,.94);--osfg:#e8eaed;--os2:#9aa0a6;--ostile:#3c4043;--osacc:#a8c7fa;--osaccfg:#062e6f;--osline:rgba(255,255,255,.14)}
 #desktop{position:fixed;inset:0;background-size:cover;background-position:center}
-#snapprev{position:fixed;z-index:5;border-radius:12px;background:rgba(138,180,248,.26);border:2px solid rgba(138,180,248,.75);pointer-events:none;display:none;transition:left .1s,top .1s,width .1s,height .1s}
+/* ChromeOS PhantomWindow：内缩 8px 的半透明白色圆角预览，而非蓝色描边框 */
+#snapprev{position:fixed;z-index:5;pointer-events:none;display:none;transition:left .1s,top .1s,width .1s,height .1s}
+#snapprev::before{content:'';position:absolute;inset:8px;border-radius:12px;background:rgba(255,255,255,.24);box-shadow:inset 0 0 0 1px rgba(255,255,255,.5),0 0 0 1px rgba(0,0,0,.14);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px)}
 /* 书架 (ChromeOS Shelf：左侧启动器、居中 Hotseat 应用栏、右侧日期+状态双胶囊) */
 #shelf{position:fixed;left:0;right:0;bottom:0;height:48px;display:flex;align-items:center;justify-content:space-between;padding:0 6px;z-index:3000;background:var(--shelf);color:var(--shelf-fg);border-radius:24px 24px 0 0;-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);box-shadow:0 -1px 0 rgba(255,255,255,.08);transition:background-color .2s cubic-bezier(.2,0,0,1),border-radius .2s cubic-bezier(.2,0,0,1),transform .22s cubic-bezier(.2,0,0,1)}
 body.shmax:not(.ov):not(.shauto) #shelf{border-radius:0;background:var(--shelf-max)}
@@ -1061,6 +1063,9 @@ body.dark .wframe{background:#202124;box-shadow:0 0 0 1px rgba(255,255,255,.14),
 body.dark .wframe.blur{box-shadow:0 0 0 1px rgba(255,255,255,.1),0 6px 22px rgba(0,0,0,.45)}
 .wframe iframe{position:absolute;inset:0;width:100%;height:100%;border:0;border-radius:inherit;overflow:hidden;background:transparent;opacity:0;transition:opacity .12s}
 .wframe:not(.max):not(.fs) iframe,.wframe.ov iframe{clip-path:inset(0 round 12px)}
+/* ChromeOS 仅普通与浮动窗口带圆角，贴靠分屏的窗口与最大化一样为直角 */
+.wframe.snap:not(.ov){border-radius:0}
+.wframe.snap:not(.ov):not(.max):not(.fs) iframe{clip-path:none}
 .wframe.flt{z-index:1800!important}
 .wframe.rdy iframe{opacity:1}
 .wframe.max{left:0!important;top:0!important;width:100%!important;height:calc(100% - 48px)!important;border-radius:0;box-shadow:none;min-width:0;min-height:0}
@@ -3800,7 +3805,7 @@ render();
   const send=(w,t,o)=>{try{w.ifr.contentWindow.postMessage(Object.assign({iri:1,t:t},o||{}),MSG_ORIGIN)}catch(e){}};
   const state=w=>({max:w.max,fs:w.fs,focus:focus===w.id,min:w.min});
   function push(w){
-    w.fr.classList.toggle('max',w.max&&!w.fs);w.fr.classList.toggle('fs',w.fs);w.fr.classList.toggle('flt',!!w.flt&&!w.max&&!w.fs);w.fr.classList.toggle('blur',focus!==w.id);
+    w.fr.classList.toggle('max',w.max&&!w.fs);w.fr.classList.toggle('fs',w.fs);w.fr.classList.toggle('flt',!!w.flt&&!w.max&&!w.fs);w.fr.classList.toggle('snap',!!w.snap&&!w.max&&!w.fs);w.fr.classList.toggle('blur',focus!==w.id);
     send(w,'state',state(w));
   }
   function pushAll(){wins.forEach(push);const fw=byId(focus);document.body.classList.toggle('wfs',!!(fw&&fw.fs&&!fw.min&&!ov));if(!wins.some(w=>!w.min&&!w.closing)){const os=$('#osset');document.title=(os&&!os._min)?'设置 - IridiumOS':'Iridium'}window.updateShelf()}
@@ -3988,7 +3993,7 @@ render();
   function startResize(w,h,e){
     if(e.button!==0||w.max||w.fs||ov)return;
     e.preventDefault();e.stopPropagation();focusWin(w,true);cancelAn(w);
-    if(w.snap){w.snap=null}
+    if(w.snap){w.snap=null;push(w)}
     D={w:w,kind:'resize',dir:h.dataset.d,px0:e.clientX,py0:e.clientY,b0:clone(w.b),ofx:0,ofy:0,started:true};
     shieldOn(getComputedStyle(h).cursor);document.body.classList.add('wdrag');
   }
