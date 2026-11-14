@@ -374,19 +374,18 @@ body.shmax:not(.ov):not(.shauto) #shelf{border-radius:0;background:var(--shelf-m
 body.shauto.shhaswin:not(.ov):not(.shpeek) #shelf{transform:translateY(45px)}
 body.shauto.max #win,body.shauto .wframe.max,body.shauto #osset.max{height:100%!important}
 body.fs #shelf{display:none}
-#shelf .sbtn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;margin-left:2px;background:var(--sttray);color:var(--shelf-fg);transition:background-color .12s}
+#shelf .sbtn{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none;background:var(--sttray);color:var(--shelf-fg);transition:background-color .12s}
 #shelf .sbtn:hover{background:var(--shelf-hov)}
 #shelf .sbtn.lon{background:var(--osacc);color:var(--osaccfg)}
 #shelf .sbtn .ldot{transition:transform .16s cubic-bezier(.2,0,0,1),opacity .14s}
 #shelf .sbtn.lon .ldot{transform:scale(.45);opacity:0;transform-origin:12px 12px}
-#hotseat{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:4px;height:100%}
+#hotseat{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;height:100%}
 @media (max-width:520px){#hotseat{position:static;transform:none}}
-.sitem{width:44px;height:42px;padding-bottom:3px;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;flex:none;transition:background .12s}
-.sitem:hover{background:var(--shelf-hov)}
-.sitem:active{transform:scale(.93)}
-.sitem::after{content:'';position:absolute;bottom:2px;left:50%;width:6px;height:3px;margin-left:-3px;border-radius:2px;background:var(--shelf-fg);opacity:0;transition:width .18s,margin .18s,opacity .18s}
-.sitem.run::after{width:8px;margin-left:-4px;opacity:.62}
-.sitem.act::after{width:16px;margin-left:-8px;opacity:1}
+/* ShelfAppButton：48dp 按钮、8dp 间距；悬停不显示高亮，仅按下时显示水波。状态指示为 2dp 圆头线：运行 6dp(次要色)、活动 12dp(前景色)，中心距书架底边 3dp */
+.sitem{width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;position:relative;flex:none}
+.sitem::after{content:'';position:absolute;bottom:2px;left:50%;width:6px;height:2px;margin-left:-3px;border-radius:1px;background:var(--os2);opacity:0;transition:width .18s,margin .18s,opacity .18s,background-color .18s}
+.sitem.run::after{opacity:1}
+.sitem.act::after{width:12px;margin-left:-6px;background:var(--shelf-fg);opacity:1}
 .aic{display:inline-flex;align-items:center;justify-content:center;border-radius:50%;color:#fff;flex:none}
 #statusarea{margin-left:auto;display:flex;align-items:center;gap:3px;flex:none}
 #datetray,#status{height:36px;padding:0 12px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:500;background:var(--sttray);color:var(--shelf-fg);flex:none;position:relative;transition:background-color .12s,color .12s}
@@ -619,9 +618,6 @@ body.dark .spin{border-color:var(--blue);border-left-color:transparent}
 @keyframes wclose{to{opacity:0;transform:scale(.9)}}
 #win.opening{transform-origin:50% 100%;animation:wopen2 .22s var(--ease)}
 @keyframes wopen2{from{opacity:0;transform:translateY(24px) scale(.92)}to{opacity:1;transform:none}}
-/* 置物架图标弹跳 */
-.sitem.bounce>*{animation:sbounce .5s cubic-bezier(.3,0,.2,1)}
-@keyframes sbounce{0%,100%{transform:none}30%{transform:translateY(-9px)}60%{transform:none}78%{transform:translateY(-3px)}}
 /* 对话框 / 悬停卡片 / 联想下拉 */
 .overlay{animation:ofade .16s linear}
 .dlg{animation:dpop .22s var(--ease)}
@@ -2787,9 +2783,10 @@ function renderStatus(){
   const dt=$('#datetray');
   if(dt){dt.innerHTML=`${OS.dnd?`<span style="display:flex">${svg(P.dnd,16)}</span>`:''}<span id="date">${shortDate()}</span>`;dt.title=dateStr()+(OS.dnd?'\n勿扰模式已开启':'')}
   const wf=netOn();
-  s.innerHTML=`<span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span>${OS.bt?`<span style="display:flex">${svg(P.bt,16)}</span>`:''}<span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span id="clock">${hhmm()}</span>`;
+  /* 与 ChromeOS UnifiedSystemTray 一致：时间在最前，其后为网络与电池；状态区不显示蓝牙图标 */
+  s.innerHTML=`<span id="clock">${hhmm()}</span><span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span>`;
   s.title=dateStr()+' '+hhmm()+'\n电池电量 '+BAT.l+'%'+(BAT.c?'（正在充电）':'');
-  const lock=$('#lock');if(lock){const ls=$('.lstat',lock);if(ls)ls.innerHTML=`<span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span>${hhmm()}</span>`}
+  const lock=$('#lock');if(lock){const ls=$('.lstat',lock);if(ls)ls.innerHTML=`<span>${hhmm()}</span><span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span>`}
 }
 mq.addEventListener&&mq.addEventListener('change',()=>{if(OS.dark==null){applyOS();applySettings()}});
 setInterval(renderStatus,15000);
@@ -2803,6 +2800,9 @@ document.addEventListener('mousemove',e=>{
 
 /* 应用 */
 P.photo='M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z';
+P.brush='M7 14c-1.66 0-3 1.34-3 3 0 1.31-1.16 2-2 2 .92 1.22 2.49 2 4 2 2.21 0 4-1.79 4-4 0-1.66-1.34-3-3-3zm13.71-9.37-1.34-1.34a.996.996 0 0 0-1.41 0L9 12.25 11.75 15l8.96-8.96c.39-.39.39-1.02 0-1.41z';
+P.shelfHide='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM12 16.5l3.5-3.5-1.06-1.06L12 14.38l-2.44-2.44L8.5 13z';
+P.shelfShow='M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 14h10v3H7z';
 const APPS=[{id:'iri',n:'Iridium',k:'browser chrome'},{id:'files',n:'文件',k:'files',ic:P.folder,bg:'#1a73e8'},{id:'set',n:'设置',k:'settings',ic:P.gear,bg:'#1967d2'},{id:'cam',n:'相机',k:'camera',ic:P.cam,bg:'#d93025'},{id:'cal',n:'日历',k:'calendar',ic:P.cal,bg:'#1a73e8'},{id:'photos',n:'图库',k:'photos gallery',ic:P.photo,bg:'#f29900'}];
 const appIcon=(a,s=48)=>a.id==='iri'?IRI(s):`<span class="aic" style="width:${s}px;height:${s}px;background:${a.bg}">${svg(a.ic,Math.round(s*.54))}</span>`;
 function openApp(id){
@@ -2905,7 +2905,7 @@ function lockScreen(signedOut){
   closeOS();if($('#lock'))return;closePopups();hideSugg();hideHC();document.body.classList.add('locked');
   try{if(document.activeElement)document.activeElement.blur();window.focus()}catch(e){}
   const wf=netOn();
-  const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:20px;font-weight:500">User</div><button class="lubtn">${signedOut?'点击或按 Enter 键登录':'点击或按 Enter 键解锁'}</button></div><div class="lshelf"><div class="lpills"><button class="lpill" data-lp="off">${svg(P.power,18)}<span>关机</span></button>${signedOut?'':`<button class="lpill" data-lp="out">${svg(P.exit,18)}<span>退出</span></button>`}</div><div class="lstat"><span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span>${hhmm()}</span></div></div></div>`);
+  const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:20px;font-weight:500">User</div><button class="lubtn">${signedOut?'点击或按 Enter 键登录':'点击或按 Enter 键解锁'}</button></div><div class="lshelf"><div class="lpills"><button class="lpill" data-lp="off">${svg(P.power,18)}<span>关机</span></button>${signedOut?'':`<button class="lpill" data-lp="out">${svg(P.exit,18)}<span>退出</span></button>`}</div><div class="lstat"><span>${hhmm()}</span><span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span></div></div></div>`);
   document.body.append(d);$('.lubtn',d).focus();
   const un=()=>{d.remove();document.body.classList.remove('locked');document.removeEventListener('keydown',kh,true)};
   const kh=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();un()}};
@@ -3048,10 +3048,10 @@ function showOsMenu(items,x,y,up){
 function toggleAutohide(){OS.autohide=!OS.autohide;saveOS();applyOS();dispatchEvent(new Event('resize'))}
 function shelfBgMenuItems(){
   const ic=p=>svg(p,18);
+  /* ChromeOS ShelfContextMenuModel：自动隐藏项按状态切换为“始终显示书架”，并且菜单中没有显示器设置 */
   return [
-    {label:'自动隐藏书架',checked:!!OS.autohide,fn:toggleAutohide},
-    {label:'设置壁纸和样式',icon:ic(P.edit),fn:()=>openOsSettings('personal')},
-    {label:'显示器设置',icon:ic(P.bright),fn:()=>openOsSettings('display')}
+    {label:OS.autohide?'始终显示书架':'自动隐藏书架',icon:ic(OS.autohide?P.shelfShow:P.shelfHide),fn:toggleAutohide},
+    {label:'设置壁纸和样式',icon:ic(P.brush),fn:()=>openOsSettings('personal')}
   ];
 }
 /* 书架初始化 */
@@ -3080,9 +3080,9 @@ const wallMenu=e=>{if(e.target.closest('button'))return;e.preventDefault();close
 $('#desktop').addEventListener('contextmenu',wallMenu);
 $('#shelf').addEventListener('contextmenu',wallMenu);
 
-/* ---- 水波/状态层 (ink drop) 与置物架图标弹跳 ---- */
+/* ---- 水波/状态层 (ink drop)：书架应用按钮仅按下时显示水波，没有 Dock 式弹跳 ---- */
 (function(){
-  const SEL='.tb,.ts-btn,#omnibox .ob,.tclose,#winctl button,#shelf .sbtn,.qc,#status,#datetray';
+  const SEL='.tb,.ts-btn,#omnibox .ob,.tclose,#winctl button,#shelf .sbtn,.sitem,.qc,#status,#datetray';
   document.addEventListener('pointerdown',e=>{
     if(e.button!==0||!e.target.closest)return;
     const b=e.target.closest(SEL);if(!b||b.disabled)return;
@@ -3091,10 +3091,6 @@ $('#shelf').addEventListener('contextmenu',wallMenu);
     const end=()=>{r.classList.add('out');setTimeout(()=>r.remove(),320);ev.forEach(n=>b.removeEventListener(n,end))};
     ev.forEach(n=>b.addEventListener(n,end));
   },true);
-  document.addEventListener('click',e=>{
-    const s=e.target.closest&&e.target.closest('.sitem');if(!s)return;
-    s.classList.remove('bounce');void s.offsetWidth;s.classList.add('bounce');
-  });
 })();
 
 /* ============ 工具提示 / 页面右键菜单 / 窗口激活状态 / 全屏提示 ============ */
