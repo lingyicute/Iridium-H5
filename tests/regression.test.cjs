@@ -53,6 +53,9 @@ async function desktop(t, seed = {}) {
   const frame = page.frames().find(f => f.url().includes('?embed=1'));
   assert.ok(frame, 'browser window must be embedded');
   await frame.waitForFunction(() => typeof tabs !== 'undefined' && tabs.length > 0);
+  // WM.ready precedes iframe presentation and the deferred omnibox autofocus.
+  await page.waitForFunction(() => WM.wins[0].fr.classList.contains('rdy'));
+  await frame.waitForFunction(() => !isNtpUrl(cur().url) || document.activeElement.id === 'url');
   return { page, frame, context };
 }
 
