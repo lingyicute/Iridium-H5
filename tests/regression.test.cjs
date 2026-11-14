@@ -863,3 +863,15 @@ test('desktop toast and snap preview follow ChromeOS system styling', async t =>
   });
   assert.deepEqual(phantom, [8, 8, Math.round(1280 / 2 - 16), 800 - 48 - 16]);
 });
+
+test('launcher bubble follows the ChromeOS bubble launcher layout', async t => {
+  const { page } = await desktop(t);
+  await page.locator('#launcher').click();
+  await page.locator('#lc').waitFor({ state: 'visible' });
+  const info = await page.evaluate(() => {
+    const lc = getComputedStyle(document.querySelector('#lc'));
+    const sb = getComputedStyle(document.querySelector('#lc .lsearch'));
+    return { radius: lc.borderTopLeftRadius, searchBg: sb.backgroundColor, separator: sb.borderBottomWidth, heading: !!document.querySelector('#lc .lh'), apps: document.querySelectorAll('#lc .lapp').length };
+  });
+  assert.deepEqual(info, { radius: '16px', searchBg: 'rgba(0, 0, 0, 0)', separator: '1px', heading: false, apps: 6 });
+});
