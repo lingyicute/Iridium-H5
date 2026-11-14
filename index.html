@@ -408,9 +408,9 @@ body.fs #shelf{display:none}
 #qs,#calbub{right:8px;bottom:56px}
 #qs{width:min(400px,calc(100vw - 16px));max-height:calc(100dvh - 64px);padding:0;overflow-y:auto}
 #calbub{width:376px;padding:16px}
-.qhead{display:flex;align-items:center;gap:6px;margin:0 4px 12px}
+.qhead{display:flex;align-items:center;gap:12px;margin:0;padding:16px 16px 12px}
 .qhead b{font-size:16px;font-weight:500;flex:1}
-.qtoday{height:30px;padding:0 12px;border-radius:15px;background:var(--ostile);color:var(--osfg);font-size:12px;font-weight:500;white-space:nowrap}
+.qtoday{width:34px;height:34px;padding:0;border-radius:50%;background:var(--ostile);color:var(--osfg);display:flex;align-items:center;justify-content:center;flex:none}
 .qtoday:hover{filter:brightness(.95)}
 /* Ash FeatureTilesContainerView：主磁贴权重为 2，紧凑磁贴为 1，每行总权重为 4。 */
 .qtiles{display:flex;flex-direction:column;padding:16px 0}
@@ -446,15 +446,15 @@ body.osdark .qc:hover,body.osdark .qpill:hover,body.osdark .qpwr:hover{filter:br
 .qbat{gap:4px;padding:0 12px 0 8px}
 .qpwr{gap:1px;padding:0 6px 0 10px;position:relative;overflow:hidden}
 .qpwr svg+svg{opacity:.8}
-#calbub{width:min(376px,calc(100vw - 16px));max-height:calc(100dvh - 64px);overflow-y:auto}
-.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center;padding:0 2px 2px}
+#calbub{width:min(400px,calc(100vw - 16px));max-height:calc(100dvh - 64px);padding:0;overflow-y:auto}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center;padding:0 16px 20px}
 .cal .th{height:28px;display:flex;align-items:center;justify-content:center;color:var(--os2);font-size:12px;font-weight:500}
 .cal .cday{height:42px;min-width:0;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--osfg);font-size:13px}
 .cal .daynum{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex:none}
 .cal .cday:not(:disabled):hover .daynum{background:var(--shelf-hov)}
 .cal .cday.outside{color:var(--os2);opacity:.65}
 .cal .selected:not(.td) .daynum{box-shadow:inset 0 0 0 2px var(--osacc)}
-.cal .td .daynum{background:var(--osacc);color:var(--osaccfg);font-weight:500}
+.cal .td .daynum{background:var(--osprimaryc);color:var(--osonprimaryc);font-weight:500}
 .cal .cday:focus-visible{outline:2px solid var(--osacc);outline-offset:-2px}
 /* 气泡启动器 (ChromeOS AppListBubbleView)：16dp 圆角 (kBubbleCornerRadius)；宽度 544dp (工作区 <1200dp) / 640dp，高度默认 688dp 且不超过 工作区高度-书架-16dp；搜索框无独立底色，下方以分隔线与内容区隔开，没有“应用”标题 */
 #lc{left:8px;bottom:56px;width:min(544px,calc(100vw - 16px));height:min(688px,calc(100dvh - 112px));padding:0;border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
@@ -2936,7 +2936,7 @@ function drawCal(b){
     const date=new Date(y,m,i-first+1),key=calDateKey(date),inside=date.getMonth()===m,isToday=inside&&key===today,isSelected=inside&&key===selected;
     c+=`<button class="cday${inside?'':' outside'}${isToday?' td':''}${isSelected?' selected':''}" data-date="${key}" aria-label="${date.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'})}"${isToday?' aria-current="date"':''}${inside?` aria-pressed="${isSelected}"`:' disabled'} tabindex="${inside&&date.getDate()===focusDay?0:-1}"><span class="daynum">${date.getDate()}</span></button>`;
   }
-  b.innerHTML=`<div class="qhead"><b id="cal-title">${y}年${m+1}月</b><button class="qtoday" data-a="today">今天</button><button class="qc" data-a="prev" title="上个月">${svg(P.up,18)}</button><button class="qc" data-a="next" title="下个月">${svg(P.down,18)}</button></div><div class="cal" role="group" aria-labelledby="cal-title">${c}</div>`;
+  b.innerHTML=`<div class="qhead"><b id="cal-title">${y}年${m+1}月</b><button class="qtoday" data-a="today" title="返回今天" aria-label="返回今天">${svg(P.cal,18)}</button><button class="qc" data-a="prev" title="上个月" aria-label="上个月">${svg(P.up,18)}</button><button class="qc" data-a="next" title="下个月" aria-label="下个月">${svg(P.down,18)}</button></div><div class="cal" role="group" aria-labelledby="cal-title">${c}</div>`;
 }
 
 /* 快速设置 (ChromeOS Material You QsRevamp) */

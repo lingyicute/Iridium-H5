@@ -745,7 +745,8 @@ test('quick settings, calendar bubble, OS settings, launcher icons and lock shel
   await page.locator('#datetray').click();
   await page.locator('#calbub').waitFor({ state: 'visible' });
   assert.equal(await page.locator('#qs').count(), 0);
-  assert.equal(await page.locator('#calbub .qtoday').textContent(), '今天');
+  assert.equal(await page.locator('#calbub .qtoday').getAttribute('aria-label'), '返回今天');
+  assert.equal(await page.locator('#calbub .qtoday svg').count(), 1);
 
   await page.evaluate(() => openOsSettings('personal'));
   const osInfo = await page.evaluate(() => ({
@@ -816,7 +817,10 @@ test('window multitask menu, overview desks bar, toolbar avatar policy and Chrom
 
 test('shelf status tray order, app indicators and wallpaper menu follow ChromeOS', async t => {
   const { page } = await desktop(t);
-  await page.waitForFunction(() => getComputedStyle(document.querySelector('#sh-iri'), '::after').width === '12px');
+  await page.waitForFunction(() => {
+    const indicator = getComputedStyle(document.querySelector('#sh-iri'), '::after');
+    return indicator.width === '12px' && indicator.opacity === '1';
+  });
   const info = await page.evaluate(() => {
     OS.bt = true; renderStatus();
     const s = document.querySelector('#status');
@@ -965,6 +969,25 @@ test('calendar keeps today circular and distinct from the selected day', async t
   const { page, frame } = await desktop(t);
   await frame.waitForFunction(() => document.activeElement.id === 'url');
   await page.locator('#datetray').click();
+  assert.deepEqual(await page.evaluate(() => {
+    const today = document.querySelector('.cal .td .daynum');
+    const reset = document.querySelector('#calbub [data-a="today"]');
+    return {
+      width: document.querySelector('#calbub').offsetWidth,
+      calendarPadding: getComputedStyle(document.querySelector('.cal')).paddingLeft,
+      resetSize: [reset.offsetWidth, reset.offsetHeight],
+      resetIcon: reset.querySelectorAll('svg').length,
+      todayBg: getComputedStyle(today).backgroundColor,
+      todayFg: getComputedStyle(today).color,
+    };
+  }), {
+    width: 400,
+    calendarPadding: '16px',
+    resetSize: [34, 34],
+    resetIcon: 1,
+    todayBg: 'rgb(211, 227, 253)',
+    todayFg: 'rgb(4, 30, 73)',
+  });
   assert.deepEqual(await page.locator('.cal .td .daynum').evaluate(e => ({ w: e.offsetWidth, h: e.offsetHeight })), { w: 36, h: 36 });
   await page.locator('.cal .cday:not(:disabled):not(.td)').first().click();
   assert.equal(await page.locator('.cal .td').count(), 1);
