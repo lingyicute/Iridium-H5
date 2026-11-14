@@ -436,15 +436,27 @@ body.osdark .qc:hover,body.osdark .qpill:hover,body.osdark .qpwr:hover{filter:br
 .cal span{height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:13px}
 .cal .th{color:var(--os2);font-size:12px;font-weight:500}
 .cal .td{background:var(--osacc);color:var(--osaccfg);font-weight:500}
-/* 气泡启动器 (ChromeOS AppListBubbleView)：16dp 圆角；搜索框无独立底色，下方以分隔线与应用网格隔开，没有“应用”标题 */
-#lc{left:8px;bottom:56px;width:min(544px,calc(100vw - 16px));padding:0 0 16px;border-radius:16px}
-.lsearch{display:flex;align-items:center;gap:16px;height:56px;padding:0 20px;color:var(--os2);border-bottom:1px solid var(--osline)}
-.lsearch input{flex:1;background:none;border:0;font-size:14px;color:var(--osfg);user-select:text}
+/* 气泡启动器 (ChromeOS AppListBubbleView)：16dp 圆角 (kBubbleCornerRadius)；宽度 544dp (工作区 <1200dp) / 640dp，高度默认 688dp 且不超过 工作区高度-书架-16dp；搜索框无独立底色，下方以分隔线与内容区隔开，没有“应用”标题 */
+#lc{left:8px;bottom:56px;width:min(544px,calc(100vw - 16px));height:min(688px,calc(100dvh - 112px));padding:0;border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
+@media (min-width:1200px){#lc{width:640px}}
+.lsearch{display:flex;align-items:center;gap:16px;height:56px;min-height:56px;padding:0 20px;color:var(--os2);border-bottom:1px solid var(--osline)}
+.lsearch input{flex:1;min-width:0;background:none;border:0;font-size:14px;color:var(--osfg);user-select:text}
 .lsearch input::placeholder{color:var(--os2)}
-.lgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;min-height:130px;align-content:start;padding:16px 16px 0}
-.lapp{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border-radius:14px;font-size:12px;color:var(--osfg)}
+.lclear{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--os2);flex:none}
+.lclear:hover{background:var(--shelf-hov)}
+.lcontent{flex:1;min-height:0;overflow:auto;padding:16px}
+.lgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;min-height:130px;align-content:start}
+.lapp{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border-radius:14px;font-size:12px;color:var(--osfg);min-width:0}
+.lapp>span:last-child{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lapp:hover{background:var(--shelf-hov)}
 .lapp .aic,.lapp .iri{box-shadow:0 1px 3px rgba(0,0,0,.22)}
+.lgrid.searching{display:flex;flex-direction:column;gap:4px;min-height:0}
+.lresult{display:flex;align-items:center;gap:16px;min-height:48px;padding:8px 16px;border-radius:12px;text-align:left;color:var(--osfg);flex:none}
+.lresult>span:last-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lresult:hover{background:var(--shelf-hov)}
+.lresult.sel{background:var(--ostile)}
+.lresult .lwebicon{width:32px;height:32px;display:flex;align-items:center;justify-content:center;color:var(--os2);flex:none}
+#lc :focus-visible{outline-color:var(--osacc)}
 /* 系统设置 (ChromeOS Jelly Settings SWA：不透明底色 + 白色/深灰抬升卡片 + 顶栏搜索) */
 #osset{--oss-bg:#eef1f8;--oss-card:#fff;position:fixed;left:50%;top:46%;transform:translate(-50%,-50%);width:min(900px,94vw);height:min(580px,78vh);z-index:2000;border-radius:12px;background:var(--oss-bg);color:var(--osfg);box-shadow:0 0 0 1px rgba(0,0,0,.2),0 16px 48px rgba(0,0,0,.45);display:flex;flex-direction:column;overflow:hidden;user-select:none;animation:wopen .18s cubic-bezier(.2,.8,.2,1)}
 body.osdark #osset{--oss-bg:#1b1c20;--oss-card:#282a2f}
@@ -2829,16 +2841,35 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOS()});
 function toggleLauncher(){
   if(osOpen==='lc'){closeOS();return}
   closeOS();closePopups();osOpen='lc';$('#launcher').classList.add('lon');syncShelf();
-  const b=el(`<div class="osb" id="lc"><div class="lsearch">${svg(P.search,20)}<input placeholder="搜索您的设备、应用、设置和网络" spellcheck="false"></div><div class="lgrid"></div></div>`);
+  const b=el(`<div class="osb" id="lc" role="dialog" aria-label="启动器"><div class="lsearch">${svg(P.search,20)}<input placeholder="搜索您的设备、应用、设置和网络" aria-label="搜索您的设备、应用、设置和网络" role="combobox" aria-controls="launcher-results" aria-expanded="false" aria-autocomplete="list" autocomplete="off" spellcheck="false"><button class="lclear" aria-label="清除搜索" hidden>${svg(P.close,18)}</button></div><div class="lcontent"><div class="lgrid" id="launcher-results" aria-label="应用"></div></div></div>`);
   document.body.append(b);
-  const g=$('.lgrid',b),inp=$('input',b);
+  const g=$('.lgrid',b),inp=$('input',b),clear=$('.lclear',b);
   const match=q=>APPS.filter(a=>!q||a.n.toLowerCase().includes(q)||(a.k&&a.k.includes(q)));
-  const draw=()=>{const q=inp.value.trim().toLowerCase();g.innerHTML=match(q).map(a=>`<button class="lapp" data-a="${a.id}">${appIcon(a,48)}<span>${esc(a.n)}</span></button>`).join('')||`<div style="grid-column:1/-1;padding:28px 0;text-align:center;color:var(--os2)">按 Enter 键在网络上搜索“${esc(inp.value)}”</div>`};
-  draw();inp.oninput=draw;inp.focus();
-  inp.onkeydown=e=>{
-    if(e.key==='Enter'&&inp.value.trim()){const v=inp.value.trim(),m=match(v.toLowerCase());if(m.length&&!looksLikeUrl(v))openApp(m[0].id);else{closeOS();WM.openUrl(v)}}
+  let selected=0;
+  const select=()=>{
+    const rows=$$('.lresult',g);
+    rows.forEach((r,i)=>{r.classList.toggle('sel',i===selected);r.setAttribute('aria-selected',String(i===selected))});
+    if(rows[selected])inp.setAttribute('aria-activedescendant',rows[selected].id);else inp.removeAttribute('aria-activedescendant');
   };
-  b.onclick=e=>{const a=e.target.closest('[data-a]');if(a)openApp(a.dataset.a)};
+  const draw=()=>{
+    const q=inp.value.trim().toLowerCase();
+    clear.hidden=!inp.value;g.classList.toggle('searching',!!q);g.setAttribute('role',q?'listbox':'group');
+    inp.setAttribute('aria-expanded',String(!!q));
+    g.innerHTML=q?match(q).map((a,i)=>`<button class="lresult" id="launcher-result-${i}" role="option" tabindex="-1" data-a="${a.id}">${appIcon(a,32)}<span>${esc(a.n)}</span></button>`).join('')+`<button class="lresult" id="launcher-web" role="option" tabindex="-1" data-web><span class="lwebicon">${svg(P.search,20)}</span><span>在网络上搜索“${esc(inp.value.trim())}”</span></button>`:APPS.map(a=>`<button class="lapp" data-a="${a.id}">${appIcon(a,48)}<span>${esc(a.n)}</span></button>`).join('');
+    selected=0;select();
+  };
+  const reset=()=>{inp.value='';draw();inp.focus()};
+  draw();inp.oninput=draw;clear.onclick=reset;inp.focus();
+  inp.onkeydown=e=>{
+    if(e.isComposing||e.keyCode===229)return;
+    if(e.key==='Escape'&&inp.value){e.preventDefault();e.stopPropagation();reset();return}
+    const rows=$$('.lresult',g);
+    if(rows.length&&(e.key==='ArrowDown'||e.key==='ArrowUp')){
+      e.preventDefault();selected=(selected+(e.key==='ArrowDown'?1:-1)+rows.length)%rows.length;select();rows[selected].scrollIntoView({block:'nearest'});
+    }else if(e.key==='Enter'&&rows.length){e.preventDefault();rows[selected].click()}
+  };
+  g.onmousemove=e=>{const r=e.target.closest('.lresult');if(r){selected=$$('.lresult',g).indexOf(r);select()}};
+  b.onclick=e=>{const a=e.target.closest('[data-a]');if(a)openApp(a.dataset.a);else if(e.target.closest('[data-web]')){const q=inp.value.trim();closeOS();WM.openUrl(q)}};
 }
 
 /* 独立日历气泡 (ChromeOS CalendarView：上下月箭头 + 今天胶囊) */

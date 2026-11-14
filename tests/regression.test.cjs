@@ -875,3 +875,63 @@ test('launcher bubble follows the ChromeOS bubble launcher layout', async t => {
   });
   assert.deepEqual(info, { radius: '16px', searchBg: 'rgba(0, 0, 0, 0)', separator: '1px', heading: false, apps: 6 });
 });
+
+test('launcher keeps Ash bubble dimensions instead of shrinking to its app count', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.waitForFunction(() => document.activeElement.id === 'url');
+  await page.locator('#launcher').click();
+  const size = () => page.locator('#lc').evaluate(b => ({ w: b.offsetWidth, h: b.offsetHeight }));
+  assert.deepEqual(await size(), { w: 640, h: 688 });
+  assert.equal(await page.locator('.lsearch').evaluate(b => b.offsetHeight), 56);
+  assert.equal(await page.locator('.lsearch').evaluate(b => getComputedStyle(b).backgroundColor), 'rgba(0, 0, 0, 0)');
+  await page.locator('#lc input').fill('settings');
+  assert.deepEqual(await size(), { w: 640, h: 688 });
+  await page.setViewportSize({ width: 1024, height: 700 });
+  await page.waitForFunction(() => document.querySelector('#lc').offsetWidth === 544 && document.querySelector('#lc').offsetHeight === 588);
+  assert.deepEqual(await size(), { w: 544, h: 588 });
+  await page.setViewportSize({ width: 480, height: 360 });
+  await page.waitForFunction(() => document.querySelector('#lc').offsetWidth === 464 && document.querySelector('#lc').offsetHeight === 248);
+  assert.deepEqual(await size(), { w: 464, h: 248 });
+  assert.equal(await page.locator('.lcontent').evaluate(b => getComputedStyle(b).overflowY), 'auto');
+});
+
+test('launcher switches to search rows with a clear action and keyboard selection', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.waitForFunction(() => document.activeElement.id === 'url');
+  await page.locator('#launcher').click();
+  const input = page.locator('#lc input');
+  await input.fill('c');
+  assert.equal(await page.locator('.lapp').count(), 0);
+  assert.equal(await page.locator('.lresult[data-a]').count(), 3);
+  assert.equal(await page.locator('.lresult.sel').getAttribute('data-a'), 'iri');
+  await page.keyboard.press('ArrowDown');
+  assert.equal(await page.locator('.lresult.sel').getAttribute('data-a'), 'cam');
+  const active = await input.getAttribute('aria-activedescendant');
+  assert.equal(await page.locator('#' + active).getAttribute('aria-selected'), 'true');
+  await page.locator('.lclear').click();
+  assert.equal(await page.locator('.lapp').count(), 6);
+  assert.equal(await input.getAttribute('aria-expanded'), 'false');
+  assert.equal(await input.evaluate(i => document.activeElement === i), true);
+  await input.fill('settings');
+  await page.keyboard.press('Escape');
+  assert.equal(await input.inputValue(), '');
+  assert.equal(await page.locator('#lc').count(), 1);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#lc').count(), 0);
+});
+
+test('launcher search preserves IME confirmation and escapes web result labels', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.waitForFunction(() => document.activeElement.id === 'url');
+  await page.locator('#launcher').click();
+  await page.locator('#lc input').fill('<img src=x onerror=alert(1)>');
+  assert.equal(await page.locator('#lc img[src="x"]').count(), 0);
+  assert.match(await page.locator('#launcher-web').textContent(), /<img src=x/);
+  await page.locator('#lc input').fill('设置');
+  await key(page.mainFrame(), { key: 'Enter', isComposing: true, keyCode: 229 }, '#lc input');
+  assert.equal(await page.locator('#lc').count(), 1);
+  assert.equal(await page.locator('#osset').count(), 0);
+  await page.keyboard.press('Enter');
+  assert.equal(await page.locator('#lc').count(), 0);
+  assert.equal(await page.locator('#osset').count(), 1);
+});
