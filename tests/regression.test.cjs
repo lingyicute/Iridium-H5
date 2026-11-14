@@ -935,3 +935,67 @@ test('launcher search preserves IME confirmation and escapes web result labels',
   assert.equal(await page.locator('#lc').count(), 0);
   assert.equal(await page.locator('#osset').count(), 1);
 });
+
+test('calendar fills complete weeks with disabled dates from adjacent months', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.waitForFunction(() => document.activeElement.id === 'url');
+  await page.locator('#datetray').click();
+  for (const [year, month, days, cells] of [[2026, 1, 28, 28], [2024, 1, 29, 35], [2026, 7, 31, 42], [2025, 11, 31, 35]]) {
+    await page.evaluate(({ year, month }) => {
+      calM = new Date(year, month, 1); calSelected = new Date(year, month, 15);
+      drawCal(document.querySelector('#calbub'));
+    }, { year, month });
+    assert.equal(await page.locator('.cal .cday').count(), cells);
+    assert.equal(await page.locator('.cal .cday:not(:disabled)').count(), days);
+    assert.equal(await page.locator('.cal .outside:disabled').count(), cells - days);
+    assert.equal(await page.locator('.cal .cday[tabindex="0"]').count(), 1);
+    assert.equal(await page.locator('.cal .selected').getAttribute('aria-pressed'), 'true');
+  }
+  await page.locator('#calbub [data-a="today"]').click();
+  assert.equal(await page.locator('.cal [aria-current="date"]').count(), 1);
+  assert.equal(await page.locator('.cal .td').getAttribute('data-date'), await page.evaluate(() => calDateKey(new Date())));
+});
+
+test('calendar keeps today circular and distinct from the selected day', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.waitForFunction(() => document.activeElement.id === 'url');
+  await page.locator('#datetray').click();
+  assert.deepEqual(await page.locator('.cal .td .daynum').evaluate(e => ({ w: e.offsetWidth, h: e.offsetHeight })), { w: 36, h: 36 });
+  await page.locator('.cal .cday:not(:disabled):not(.td)').first().click();
+  assert.equal(await page.locator('.cal .td').count(), 1);
+  assert.equal(await page.locator('.cal .selected:not(.td)').count(), 1);
+  assert.notEqual(await page.locator('.cal .selected .daynum').evaluate(e => getComputedStyle(e).boxShadow), 'none');
+  assert.match(await page.locator('.cal .selected').getAttribute('aria-label'), /年.*月.*日/);
+  assert.equal(await page.locator('.cal .selected').evaluate(e => e === document.activeElement), true);
+  await page.setViewportSize({ width: 360, height: 420 });
+  await page.waitForFunction(() => document.querySelector('#calbub').offsetWidth === 344);
+  assert.ok(await page.locator('#calbub').evaluate(e => e.offsetHeight <= 356));
+  assert.deepEqual(await page.locator('.cal .td .daynum').evaluate(e => ({ w: e.offsetWidth, h: e.offsetHeight })), { w: 36, h: 36 });
+});
+
+test('calendar keyboard selection crosses leap months and years without losing focus', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.waitForFunction(() => document.activeElement.id === 'url');
+  await page.locator('#datetray').click();
+  await page.evaluate(() => {
+    calM = new Date(2024, 0, 1); calSelected = new Date(2024, 0, 31);
+    drawCal(document.querySelector('#calbub'));
+    document.querySelector('[data-date="2024-01-31"]').focus();
+  });
+  const focused = () => page.evaluate(() => document.activeElement.dataset.date);
+  await page.keyboard.press('PageDown');
+  assert.equal(await focused(), '2024-02-29');
+  await page.keyboard.press('ArrowRight');
+  assert.equal(await focused(), '2024-03-01');
+  await page.keyboard.press('PageUp');
+  assert.equal(await focused(), '2024-02-01');
+  await page.keyboard.press('End');
+  assert.equal(await focused(), '2024-02-03');
+  await page.keyboard.press('Home');
+  assert.equal(await focused(), '2024-01-28');
+  await page.keyboard.press('PageUp');
+  assert.equal(await focused(), '2023-12-28');
+  assert.equal(await page.locator('.cal .selected').getAttribute('data-date'), '2023-12-28');
+  await page.locator('#calbub [data-a="next"]').click();
+  assert.equal(await page.locator('#calbub [data-a="next"]').evaluate(e => e === document.activeElement), true);
+});
