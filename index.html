@@ -436,12 +436,12 @@ body.osdark .qc:hover,body.osdark .qpill:hover,body.osdark .qpwr:hover{filter:br
 .cal span{height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:13px}
 .cal .th{color:var(--os2);font-size:12px;font-weight:500}
 .cal .td{background:var(--osacc);color:var(--osaccfg);font-weight:500}
-#lc{left:8px;bottom:56px;width:min(544px,calc(100vw - 16px));padding:16px 20px 22px;border-radius:24px}
-.lsearch{display:flex;align-items:center;gap:12px;height:44px;border-radius:22px;background:var(--ostile);padding:0 16px;color:var(--os2)}
+/* 气泡启动器 (ChromeOS AppListBubbleView)：16dp 圆角；搜索框无独立底色，下方以分隔线与应用网格隔开，没有“应用”标题 */
+#lc{left:8px;bottom:56px;width:min(544px,calc(100vw - 16px));padding:0 0 16px;border-radius:16px}
+.lsearch{display:flex;align-items:center;gap:16px;height:56px;padding:0 20px;color:var(--os2);border-bottom:1px solid var(--osline)}
 .lsearch input{flex:1;background:none;border:0;font-size:14px;color:var(--osfg);user-select:text}
 .lsearch input::placeholder{color:var(--os2)}
-.lh{margin:16px 8px 8px;font-size:12px;font-weight:500;color:var(--os2)}
-.lgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;min-height:130px;align-content:start}
+.lgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;min-height:130px;align-content:start;padding:16px 16px 0}
 .lapp{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border-radius:14px;font-size:12px;color:var(--osfg)}
 .lapp:hover{background:var(--shelf-hov)}
 .lapp .aic,.lapp .iri{box-shadow:0 1px 3px rgba(0,0,0,.22)}
@@ -2829,7 +2829,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOS()});
 function toggleLauncher(){
   if(osOpen==='lc'){closeOS();return}
   closeOS();closePopups();osOpen='lc';$('#launcher').classList.add('lon');syncShelf();
-  const b=el(`<div class="osb" id="lc"><div class="lsearch">${svg(P.search,20)}<input placeholder="搜索您的设备、应用、设置和网络" spellcheck="false"></div><div class="lh">应用</div><div class="lgrid"></div></div>`);
+  const b=el(`<div class="osb" id="lc"><div class="lsearch">${svg(P.search,20)}<input placeholder="搜索您的设备、应用、设置和网络" spellcheck="false"></div><div class="lgrid"></div></div>`);
   document.body.append(b);
   const g=$('.lgrid',b),inp=$('input',b);
   const match=q=>APPS.filter(a=>!q||a.n.toLowerCase().includes(q)||(a.k&&a.k.includes(q)));
