@@ -482,10 +482,9 @@ body.ov #osset{opacity:0;pointer-events:none}
 .wpg button{height:78px;border-radius:14px;border:3px solid transparent;color:#fff;font-size:12px;text-shadow:0 1px 3px rgba(0,0,0,.6);display:flex;align-items:flex-end;padding:6px 10px;outline:1px solid var(--osline)}
 .wpg button.on{border-color:var(--osacc)}
 /* 锁屏 / 关机 (ChromeOS LockScreenView + LoginShelfView) */
-#lock{position:fixed;inset:0;z-index:9000;color:#fff;overflow:hidden;animation:wopen .25s ease-out}
-#lock .lbg{position:absolute;inset:-40px;filter:blur(28px) brightness(.58)}
-#lock .lt{position:absolute;left:0;right:0;top:13vh;text-align:center;font-size:15px;opacity:.92}
-#lock .lt .tm{font-size:64px;font-weight:300;line-height:1.1;letter-spacing:-.5px}
+#lock{position:fixed;inset:0;z-index:9000;color:#fff;background:#0b1730;overflow:hidden;animation:wopen .25s ease-out}
+/* 模糊半径 28px 的淡出边缘约 84px：背景需外扩到视口之外，否则四周变暗并透出下方书架 */
+#lock .lbg{position:absolute;inset:-96px;filter:blur(28px) brightness(.58)}
 #lock .lc{position:absolute;left:50%;top:52%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:14px}
 #lock .lubtn{height:38px;padding:0 22px;border-radius:19px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.26);color:#fff;font-size:13px;font-weight:500;-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);transition:background-color .14s}
 #lock .lubtn:hover,#lock .lubtn:focus-visible{background:rgba(255,255,255,.28);outline:2px solid #a8c7fa;outline-offset:2px}
@@ -2790,7 +2789,7 @@ function renderStatus(){
   const wf=netOn();
   s.innerHTML=`<span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span>${OS.bt?`<span style="display:flex">${svg(P.bt,16)}</span>`:''}<span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span id="clock">${hhmm()}</span>`;
   s.title=dateStr()+' '+hhmm()+'\n电池电量 '+BAT.l+'%'+(BAT.c?'（正在充电）':'');
-  const lock=$('#lock');if(lock){$('.tm',lock).textContent=hhmm();$('.lt>div:not(.tm)',lock).textContent=dateStr();const ls=$('.lstat',lock);if(ls)ls.innerHTML=`<span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span>${hhmm()}</span>`}
+  const lock=$('#lock');if(lock){const ls=$('.lstat',lock);if(ls)ls.innerHTML=`<span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span>${hhmm()}</span>`}
 }
 mq.addEventListener&&mq.addEventListener('change',()=>{if(OS.dark==null){applyOS();applySettings()}});
 setInterval(renderStatus,15000);
@@ -2906,7 +2905,7 @@ function lockScreen(signedOut){
   closeOS();if($('#lock'))return;closePopups();hideSugg();hideHC();document.body.classList.add('locked');
   try{if(document.activeElement)document.activeElement.blur();window.focus()}catch(e){}
   const wf=netOn();
-  const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lt"><div class="tm">${hhmm()}</div><div>${dateStr()}</div></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:20px;font-weight:500">User</div><button class="lubtn">${signedOut?'点击或按 Enter 键登录':'点击或按 Enter 键解锁'}</button></div><div class="lshelf"><div class="lpills"><button class="lpill" data-lp="off">${svg(P.power,18)}<span>关机</span></button>${signedOut?'':`<button class="lpill" data-lp="out">${svg(P.exit,18)}<span>退出</span></button>`}</div><div class="lstat"><span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span>${hhmm()}</span></div></div></div>`);
+  const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:20px;font-weight:500">User</div><button class="lubtn">${signedOut?'点击或按 Enter 键登录':'点击或按 Enter 键解锁'}</button></div><div class="lshelf"><div class="lpills"><button class="lpill" data-lp="off">${svg(P.power,18)}<span>关机</span></button>${signedOut?'':`<button class="lpill" data-lp="out">${svg(P.exit,18)}<span>退出</span></button>`}</div><div class="lstat"><span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span>${hhmm()}</span></div></div></div>`);
   document.body.append(d);$('.lubtn',d).focus();
   const un=()=>{d.remove();document.body.classList.remove('locked');document.removeEventListener('keydown',kh,true)};
   const kh=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();un()}};
