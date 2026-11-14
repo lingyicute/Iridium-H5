@@ -782,6 +782,8 @@ test('window multitask menu, overview desks bar, toolbar avatar policy and Chrom
   assert.deepEqual(mtLabels, ['分屏', '部分', '全屏', '浮动']);
   await page.locator('.snapbub [data-s="l2"]').click();
   assert.equal(await page.evaluate(() => WM.wins[0].snap === 'l2' && WM.wins[0].b.w === Math.round(innerWidth * 2 / 3)), true);
+  assert.deepEqual(await page.evaluate(() => { const w = WM.wins[0]; return [w.fr.classList.contains('snap'), getComputedStyle(w.fr).borderTopLeftRadius, getComputedStyle(w.ifr).clipPath]; }), [true, '0px', 'none']);
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#snapprev')).borderTopWidth), '0px');
 
   await page.evaluate(() => WM.newWindow(true));
   const inc = await windowFrame(page, 1);
