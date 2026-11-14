@@ -1080,3 +1080,42 @@ test('launcher keeps URL-like input on the web search row even when an app name 
   await page.locator('#lc input').fill('example');
   assert.equal(await page.locator('.lresult.sel').getAttribute('id'), 'launcher-result-0');
 });
+
+test('quick settings use Ash primary and compact tile rows and container colors', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.waitForFunction(() => document.activeElement.id === 'url');
+  await page.locator('#status').click();
+  await page.waitForFunction(() => Math.round(document.querySelector('#qs [data-t="wifi"]').getBoundingClientRect().width) === 180);
+  const inspect = () => page.evaluate(() => ({
+    bubbleWidth: document.querySelector('#qs').offsetWidth,
+    rows: [...document.querySelectorAll('#qs .qrow')].map(row => ({
+      tiles: [...row.children].map(tile => tile.dataset.t),
+      widths: [...row.children].map(tile => Math.round(tile.getBoundingClientRect().width)),
+      heights: [...row.children].map(tile => Math.round(tile.getBoundingClientRect().height)),
+    })),
+    compactDirection: getComputedStyle(document.querySelector('[data-t="shot"]')).flexDirection,
+    activeBg: getComputedStyle(document.querySelector('[data-t="wifi"]')).backgroundColor,
+    activeFg: getComputedStyle(document.querySelector('[data-t="wifi"]')).color,
+    footerBorder: getComputedStyle(document.querySelector('#qs .qbot')).borderTopWidth,
+  }));
+  assert.deepEqual(await inspect(), {
+    bubbleWidth: 400,
+    rows: [
+      { tiles: ['wifi', 'shot', 'dnd'], widths: [180, 86, 86], heights: [64, 64, 64] },
+      { tiles: ['bt'], widths: [368], heights: [64] },
+      { tiles: ['dark', 'night'], widths: [180, 180], heights: [64, 64] },
+    ],
+    compactDirection: 'column',
+    activeBg: 'rgb(211, 227, 253)',
+    activeFg: 'rgb(4, 30, 73)',
+    footerBorder: '0px',
+  });
+  await page.evaluate(() => { OS.dark = true; applyOS(); drawQS(document.querySelector('#qs')); });
+  const dark = await inspect();
+  assert.equal(dark.activeBg, 'rgb(8, 66, 160)');
+  assert.equal(dark.activeFg, 'rgb(211, 227, 253)');
+  await page.setViewportSize({ width: 360, height: 420 });
+  await page.waitForFunction(() => document.querySelector('#qs').offsetWidth === 344);
+  assert.equal(await page.locator('#qs').evaluate(e => e.offsetWidth), 344);
+  assert.ok(await page.locator('#qs').evaluate(e => e.getBoundingClientRect().top >= 0));
+});

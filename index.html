@@ -362,8 +362,8 @@ body.dark .selbar{color:var(--onbluec)}
 .psearch:focus-within{box-shadow:inset 0 0 0 2px var(--blue);background:var(--page)}
 /* ================= 桌面环境 ================= */
 body{font-family:Roboto,"Google Sans","Noto Sans CJK SC","Noto Sans SC","Noto Sans","Droid Sans Fallback","PingFang SC","Microsoft YaHei",system-ui,sans-serif;
-  --shelf:rgba(238,241,246,.78);--shelf-max:#e5e9f0;--shelf-fg:#1f1f1f;--shelf-hov:rgba(0,0,0,.08);--sttray:rgba(0,0,0,.06);--osb:rgba(246,248,252,.94);--osfg:#1f1f1f;--os2:#5f6368;--ostile:#dfe4ee;--osacc:#0b57d0;--osaccfg:#fff;--osline:rgba(0,0,0,.12)}
-body.osdark{--shelf:rgba(32,33,36,.74);--shelf-max:#202124;--shelf-fg:#e8eaed;--shelf-hov:rgba(255,255,255,.14);--sttray:rgba(255,255,255,.1);--osb:rgba(40,42,46,.94);--osfg:#e8eaed;--os2:#9aa0a6;--ostile:#3c4043;--osacc:#a8c7fa;--osaccfg:#062e6f;--osline:rgba(255,255,255,.14)}
+  --shelf:rgba(238,241,246,.78);--shelf-max:#e5e9f0;--shelf-fg:#1f1f1f;--shelf-hov:rgba(0,0,0,.08);--sttray:rgba(0,0,0,.06);--osb:rgba(246,248,252,.94);--osfg:#1f1f1f;--os2:#5f6368;--ostile:#dfe4ee;--osacc:#0b57d0;--osaccfg:#fff;--osprimaryc:#d3e3fd;--osonprimaryc:#041e49;--osline:rgba(0,0,0,.12)}
+body.osdark{--shelf:rgba(32,33,36,.74);--shelf-max:#202124;--shelf-fg:#e8eaed;--shelf-hov:rgba(255,255,255,.14);--sttray:rgba(255,255,255,.1);--osb:rgba(40,42,46,.94);--osfg:#e8eaed;--os2:#9aa0a6;--ostile:#3c4043;--osacc:#a8c7fa;--osaccfg:#062e6f;--osprimaryc:#0842a0;--osonprimaryc:#d3e3fd;--osline:rgba(255,255,255,.14)}
 #desktop{position:fixed;inset:0;background-size:cover;background-position:center}
 /* ChromeOS PhantomWindow：内缩 8px 的半透明白色圆角预览，而非蓝色描边框 */
 #snapprev{position:fixed;z-index:5;pointer-events:none;display:none;transition:left .1s,top .1s,width .1s,height .1s}
@@ -405,29 +405,39 @@ body.fs #shelf{display:none}
 #shelf :focus-visible,.osb :focus-visible,.snapbub :focus-visible,.osmenu :focus-visible,#osset :focus-visible{outline-color:var(--osacc)}
 #osset .sw input:focus-visible+span{outline:2px solid var(--osacc);outline-offset:2px}
 @keyframes osup{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
-#qs,#calbub{right:8px;bottom:56px;width:376px;padding:16px}
+#qs,#calbub{right:8px;bottom:56px}
+#qs{width:min(400px,calc(100vw - 16px));max-height:calc(100dvh - 64px);padding:0;overflow-y:auto}
+#calbub{width:376px;padding:16px}
 .qhead{display:flex;align-items:center;gap:6px;margin:0 4px 12px}
 .qhead b{font-size:16px;font-weight:500;flex:1}
 .qtoday{height:30px;padding:0 12px;border-radius:15px;background:var(--ostile);color:var(--osfg);font-size:12px;font-weight:500;white-space:nowrap}
 .qtoday:hover{filter:brightness(.95)}
-.qtiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.qt{display:flex;align-items:center;gap:12px;height:62px;padding:0 12px 0 14px;border-radius:16px;background:var(--ostile);color:var(--osfg);text-align:left;min-width:0;transition:background-color .14s,color .14s}
+/* Ash FeatureTilesContainerView：主磁贴权重为 2，紧凑磁贴为 1，每行总权重为 4。 */
+.qtiles{display:flex;flex-direction:column;padding:16px 0}
+.qrow{display:flex;gap:8px;padding:0 16px}
+.qrow+.qrow{margin-top:8px}
+.qt{display:flex;align-items:center;height:64px;border-radius:16px;background:var(--ostile);color:var(--osfg);text-align:left;min-width:0;transition:background-color .14s,color .14s}
+.qt.primary{flex:2 1 180px}
+.qt.compact{flex:1 1 86px;flex-direction:column;justify-content:center;gap:4px;padding:6px 12px}
 .qt:hover{filter:brightness(.96)}
 body.osdark .qt:hover{filter:brightness(1.08)}
-.qt .qi{width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex:none}
-.qt.on{background:var(--osacc);color:var(--osaccfg)}
-.qt .qx{display:flex;flex-direction:column;min-width:0;flex:1}
+.qt .qi{width:36px;height:52px;margin:6px;display:flex;align-items:center;justify-content:center;flex:none}
+.qt.compact .qi{width:20px;height:20px;margin:0}
+.qt.on{background:var(--osprimaryc);color:var(--osonprimaryc)}
+.qt .qx{display:flex;flex-direction:column;min-width:0;flex:1;margin-right:10px}
+.qt.compact .qx{flex:none;align-items:center;margin:0;max-width:100%}
 .qt b{font-weight:500;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.qt.compact b{font-size:12px;line-height:14px;max-width:100%}
 .qt i{font-style:normal;font-size:11.5px;opacity:.78;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 /* ChromeOS QuickSettingsSlider：36px 胶囊填充滑块，图标内嵌左侧 */
-.qsl{position:relative;display:flex;align-items:center;margin-top:12px;height:36px;border-radius:18px;background:var(--ostile);overflow:hidden}
+.qsl{position:relative;display:flex;align-items:center;margin:4px 16px 0 12px;height:36px;border-radius:18px;background:var(--ostile);overflow:hidden}
 .qsl::before{content:'';position:absolute;left:0;top:0;bottom:0;width:calc(36px + (100% - 36px) * var(--p,100) / 100);background:var(--osacc);border-radius:18px;pointer-events:none;transition:background-color .12s}
 .qsl.muted::before{background:rgba(128,128,128,.36)}
 .qsl .qsi{position:relative;z-index:2;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;color:var(--osaccfg);flex:none}
 .qsl.muted .qsi{color:var(--osfg)}
 .qsl button.qsi:hover{background:rgba(0,0,0,.08)}
 .qsl input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:1}
-.qbot{display:flex;align-items:center;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid var(--osline)}
+.qbot{display:flex;align-items:center;gap:8px;padding:16px}
 .qc{width:34px;height:34px;border-radius:50%;background:var(--ostile);display:flex;align-items:center;justify-content:center;color:var(--osfg);flex:none}
 .qc:hover,.qpill:hover,.qpwr:hover{filter:brightness(.95)}
 body.osdark .qc:hover,body.osdark .qpill:hover,body.osdark .qpwr:hover{filter:brightness(1.1)}
@@ -2961,9 +2971,10 @@ function toggleQS(cal){
   });
 }
 function drawQS(b){
-  const tile=(k,ic,l,s,on)=>`<button class="qt${on?' on':''}" data-t="${k}"><span class="qi">${svg(ic,20)}</span><span class="qx"><b>${l}</b>${s?`<i>${s}</i>`:''}</span></button>`;
+  const tile=(k,ic,l,s,on,compact=false)=>`<button class="qt ${compact?'compact':'primary'}${on?' on':''}" data-t="${k}"${k==='shot'?'':` aria-pressed="${!!on}"`}><span class="qi">${svg(ic,20)}</span><span class="qx"><b>${l}</b>${s?`<i>${s}</i>`:''}</span></button>`;
   const bp=Math.round((OS.bright-20)/80*100);
-  b.innerHTML=`<div class="qtiles">${tile('wifi',P.wifi,'网络',OS.wifi?'Iridium-5G':'已关闭',OS.wifi)}${tile('bt',P.bt,'蓝牙',OS.bt?'已开启':'已关闭',OS.bt)}${tile('dnd',P.dnd,'勿扰模式',OS.dnd?'已开启':'已关闭',OS.dnd)}${tile('dark',P.contrast,'深色主题',isOsDark()?'已开启':'已关闭',isOsDark())}${tile('night',P.moon,'夜灯',OS.night?'已开启':'已关闭',OS.night)}${tile('shot',P.capture,'屏幕截图','',false)}</div>
+  /* 与 Ash 默认顺序一致：网络、屏幕截图和勿扰占首行，蓝牙在下一行展开。 */
+  b.innerHTML=`<div class="qtiles"><div class="qrow">${tile('wifi',P.wifi,'网络',OS.wifi?'Iridium-5G':'已关闭',OS.wifi)}${tile('shot',P.capture,'屏幕截图','',false,true)}${tile('dnd',P.dnd,'勿扰模式','',OS.dnd,true)}</div><div class="qrow">${tile('bt',P.bt,'蓝牙',OS.bt?'已开启':'已关闭',OS.bt)}</div><div class="qrow">${tile('dark',P.contrast,'深色主题',isOsDark()?'已开启':'已关闭',isOsDark())}${tile('night',P.moon,'夜灯',OS.night?'已开启':'已关闭',OS.night)}</div></div>
   <div class="qsl${OS.vol?'':' muted'}" style="--p:${OS.vol}"><button class="qsi" data-m="vol" title="${OS.vol?'静音':'取消静音'}">${svg(OS.vol?P.vol:P.volOff,20)}</button><input type="range" min="0" max="100" value="${OS.vol}" data-s="vol" aria-label="音量"></div>
   <div class="qsl" style="--p:${bp}"><span class="qsi">${svg(P.bright,20)}</span><input type="range" min="20" max="100" value="${OS.bright}" data-s="bright" aria-label="亮度"></div>
   <div class="qbot"><button class="qpwr" data-a="pwr" title="电源菜单" aria-haspopup="menu">${svg(P.power,18)}${svg(P.down,16)}</button><span style="flex:1"></span><span class="qbat">${batIcon(BAT.l,BAT.c)}<span>${BAT.l}%${BAT.c?' · 正在充电':''}</span></span><button class="qc" data-a="set" title="设置">${svg(P.gear,18)}</button></div>`;
