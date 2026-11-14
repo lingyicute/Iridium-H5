@@ -4038,7 +4038,13 @@ render();
   }
   function setFs(w,on){
     w.fs=!!on;pushAll();
-    if(on){try{const p=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();p&&p.catch&&p.catch(()=>{})}catch(e){}}
+    if(on){try{
+      const p=document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen();
+      p&&p.then&&p.then(()=>{
+        // Native entry can finish after minimize/close already cleared the intent.
+        if(!wins.some(x=>x.fs&&!x.min&&!x.closing)&&document.fullscreenElement){try{document.exitFullscreen().catch(()=>{})}catch(e){}}
+      },()=>{});
+    }catch(e){}}
     else if(!wins.some(x=>x.fs)&&document.fullscreenElement){try{document.exitFullscreen().catch(()=>{})}catch(e){}}
   }
   document.addEventListener('fullscreenchange',()=>{

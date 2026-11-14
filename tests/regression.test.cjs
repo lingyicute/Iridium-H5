@@ -1025,3 +1025,32 @@ test('system focus rings belong to controls and ignore the browser accent', asyn
     assert.deepEqual(await page.locator('#osset .sw span').evaluate(e => ({ color: getComputedStyle(e).outlineColor, width: getComputedStyle(e).outlineWidth })), { color: expected, width: '2px' });
   }
 });
+
+
+test('a delayed native fullscreen entry cannot hide the shelf after minimization', async t => {
+  const { page, frame } = await desktop(t);
+  await page.evaluate(() => {
+    let active = null;
+    window.__nativeExitCount = 0;
+    Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: () => active });
+    document.documentElement.requestFullscreen = () => new Promise(resolve => {
+      window.__finishFullscreen = () => {
+        active = document.documentElement;
+        document.dispatchEvent(new Event('fullscreenchange'));
+        resolve();
+      };
+    });
+    document.exitFullscreen = async () => {
+      active = null; window.__nativeExitCount++;
+      document.dispatchEvent(new Event('fullscreenchange'));
+    };
+  });
+  await frame.evaluate(() => IWM.post('fs', { on: true }));
+  await page.waitForFunction(() => WM.wins[0].fs && window.__finishFullscreen);
+  await frame.evaluate(() => IWM.post('min'));
+  await page.waitForFunction(() => WM.wins[0].min);
+  await page.evaluate(() => window.__finishFullscreen());
+  await page.waitForFunction(() => !document.fullscreenElement);
+  assert.equal(await page.evaluate(() => window.__nativeExitCount), 1);
+  assert.equal(await page.evaluate(() => WM.wins[0].fs || document.body.classList.contains('wfs')), false);
+});
