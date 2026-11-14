@@ -339,8 +339,8 @@ test('the lock screen has no oversized clock and its status clock follows the re
   const { page } = await desktop(t);
   await page.evaluate(() => lockScreen());
   assert.equal(await page.locator('#lock .lt').count(), 0);
-  await page.evaluate(() => { document.querySelector('#lock .lstat span:last-child').textContent = '99:99'; renderStatus(); });
-  const out = await page.evaluate(() => ({ tm: document.querySelector('#lock .lstat span:last-child').textContent, now: hhmm() }));
+  await page.evaluate(() => { document.querySelector('#lock .lstat span:first-child').textContent = '99:99'; renderStatus(); });
+  const out = await page.evaluate(() => ({ tm: document.querySelector('#lock .lstat span:first-child').textContent, now: hhmm() }));
   assert.equal(out.tm, out.now);
   const overscan = await page.evaluate(() => { const cs = getComputedStyle(document.querySelector('#lock .lbg')); return Math.min(...['left', 'top', 'right', 'bottom'].map(k => -parseFloat(cs[k]))); });
   assert.ok(overscan >= 84, 'blurred backdrop must overscan so the shelf never shows through');
@@ -807,4 +807,40 @@ test('window multitask menu, overview desks bar, toolbar avatar policy and Chrom
   await page.evaluate(() => WM.toggleOverview());
   assert.equal(await page.locator('.ovdesks .ovdesk').textContent(), '桌面 1');
   assert.equal(await page.locator('.ovempty').textContent(), '没有最近使用的内容');
+});
+
+test('shelf status tray order, app indicators and wallpaper menu follow ChromeOS', async t => {
+  const { page } = await desktop(t);
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#sh-iri'), '::after').width === '12px');
+  const info = await page.evaluate(() => {
+    OS.bt = true; renderStatus();
+    const s = document.querySelector('#status');
+    const it = document.querySelector('#sh-iri');
+    const ind = getComputedStyle(it, '::after');
+    return {
+      first: s.firstElementChild.id,
+      icons: s.querySelectorAll('svg').length,
+      active: [ind.height, ind.opacity],
+      idle: getComputedStyle(document.querySelector('#sh-files'), '::after').opacity,
+      size: [it.offsetWidth, it.offsetHeight],
+      launcherLeft: Math.round(document.querySelector('#launcher').getBoundingClientRect().left),
+    };
+  });
+  assert.equal(info.first, 'clock', 'time leads the status tray like UnifiedSystemTray');
+  assert.equal(info.icons, 2, 'status tray shows network and battery only');
+  assert.deepEqual(info.active, ['2px', '1']);
+  assert.equal(info.idle, '0');
+  assert.deepEqual(info.size, [48, 48]);
+  assert.equal(info.launcherLeft, 6);
+
+  await page.locator('#sh-files').hover();
+  assert.equal(await page.evaluate(() => getComputedStyle(document.querySelector('#sh-files')).backgroundColor), 'rgba(0, 0, 0, 0)');
+
+  await page.locator('#shelf').click({ button: 'right', position: { x: 300, y: 24 } });
+  const labels = await page.evaluate(() => [...document.querySelectorAll('#layer .osmenu .mi .lb')].map(x => x.textContent));
+  assert.deepEqual(labels, ['自动隐藏书架', '设置壁纸和样式']);
+  assert.equal(await page.evaluate(() => { OS.autohide = true; const l = shelfBgMenuItems()[0].label; OS.autohide = false; return l; }), '始终显示书架');
+
+  await page.evaluate(() => lockScreen());
+  assert.equal(await page.evaluate(() => document.querySelector('#lock .lstat').firstElementChild.textContent === hhmm()), true);
 });
