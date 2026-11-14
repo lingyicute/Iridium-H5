@@ -720,12 +720,20 @@ test('quick settings, calendar bubble, OS settings, launcher icons and lock shel
   const qsInfo = await page.evaluate(() => {
     const qt = getComputedStyle(document.querySelector('#qs .qt'));
     const sl = document.querySelector('#qs .qsl');
-    const pill = document.querySelector('#qs .qpill');
-    return { radius: qt.borderTopLeftRadius, sliderH: sl.offsetHeight, pillH: pill.offsetHeight };
+    const sliders = [...document.querySelectorAll('#qs .qsl input')].map(i => i.dataset.s);
+    const tiles = [...document.querySelectorAll('#qs .qt b')].map(x => x.textContent);
+    const legacy = document.querySelectorAll('#qs [data-a="signout"],#qs [data-a="lock"],#qs [data-a="power"]').length;
+    return { radius: qt.borderTopLeftRadius, sliderH: sl.offsetHeight, batH: document.querySelector('#qs .qbat').offsetHeight, sliders, tiles, legacy };
   });
   assert.equal(qsInfo.radius, '16px');
   assert.equal(qsInfo.sliderH, 36);
-  assert.ok(qsInfo.pillH <= 36, 'sign-out pill must stay single-line');
+  assert.ok(qsInfo.batH <= 36, 'battery pill must stay single-line');
+  assert.deepEqual(qsInfo.sliders, ['vol', 'bright']);
+  assert.equal(qsInfo.tiles.includes('夜灯'), true);
+  assert.equal(qsInfo.legacy, 0);
+  await page.locator('#qs [data-a="pwr"]').click();
+  assert.deepEqual(await page.evaluate(() => [...document.querySelectorAll('#layer .osmenu .mi .lb')].map(x => x.textContent)), ['关机', '重启', '退出', '锁定']);
+  await page.evaluate(() => { closePopups(); closeOS(); });
 
   await page.locator('#datetray').click();
   await page.locator('#calbub').waitFor({ state: 'visible' });
