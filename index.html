@@ -55,7 +55,6 @@ body.max .rz{display:none}
 .ts-btn{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin-bottom:6px;color:var(--icon);flex:none}
 .ts-btn:hover{background:var(--hov)}
 .ts-btn:active{background:var(--act)}
-#tabsearch{margin-right:4px}
 #newtab{margin-left:4px}
 #tabs{display:flex;position:relative;min-width:0;flex:0 1 auto;max-width:calc(100% - 340px)}
 .spacer{flex:1;align-self:stretch;min-width:40px}
@@ -820,8 +819,10 @@ img,svg{-webkit-user-drag:none}
 ::-webkit-scrollbar-thumb:active{background:rgba(95,99,104,.85);background-clip:padding-box}
 
 /* ---- fidelity pass: tab search, group tint, not-secure chip, page info, version ---- */
-#tabsearch{width:28px;height:28px;border-radius:8px;background:var(--hov);margin-right:6px;margin-left:0}
-#tabsearch:hover{background:var(--act)}
+/* ChromeOS 的标签页搜索按钮固定在标签栏尾端、紧邻窗口控制按钮，为无底色的圆形图标按钮 */
+#tabsearch{width:28px;height:28px;border-radius:50%;background:none;margin:0 0 6px}
+#tabsearch:hover{background:var(--hov)}
+#tabsearch:active{background:var(--act)}
 .tab.ing:not(.active) .tbg{background:var(--gbg)}
 .tab.ing:not(.active):hover .tbg{filter:brightness(1.08)}
 .tab.ing:not(.active) .ttitle{color:var(--text)}
@@ -1147,10 +1148,10 @@ body.dark ::-webkit-scrollbar-thumb:hover,body.osdark #osset ::-webkit-scrollbar
 <div id="desktop"></div><div id="snapprev"></div>
 <div id="win">
   <div id="topchrome"><div id="tabstrip">
-    <button class="ts-btn" id="tabsearch" title="搜索标签页 (Ctrl+Shift+A)"></button>
     <div id="tabs"></div>
     <button class="ts-btn" id="newtab" title="新标签页"></button>
     <div class="spacer" id="spacer"></div>
+    <button class="ts-btn" id="tabsearch" title="搜索标签页 (Ctrl+Shift+A)"></button>
     <div id="winctl"><button id="wmin" title="最小化"></button><button id="wmax" title="最大化"></button><button id="wclose" title="关闭"></button></div>
   </div>
   <div id="toolbar">
@@ -2160,7 +2161,7 @@ toggler($('#siteinfo'),'site',()=>{
 });
 toggler($('#tabsearch'),'ts',()=>{
   const b=el(`<div class="tsb"><div class="tsq"><span class="tsqi">${I.search}</span><input id="tsq" placeholder="搜索标签页" spellcheck="false" autocomplete="off"></div><div id="tsl" class="tsl" role="listbox"></div></div>`);
-  showBubble(b,$('#tabsearch'),'ts',false);b.style.width='360px';b.style.padding='0';
+  showBubble(b,$('#tabsearch'),'ts',true);b.style.width='360px';b.style.padding='0';
   let sel=-1;
   const host=u=>{try{const x=new URL(u);return /^https?:$/.test(x.protocol)?x.hostname.replace(/^www\./,''):(isInternal(u)?u.replace(/\/$/,''):u)}catch(e){return u}};
   const draw=(keep)=>{

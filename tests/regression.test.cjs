@@ -760,6 +760,11 @@ test('quick settings, calendar bubble, OS settings, launcher icons and lock shel
 test('window multitask menu, overview desks bar, toolbar avatar policy and ChromeOS labels align with ChromeOS', async t => {
   const { page, frame } = await desktop(t, { settings: { accent: 'rose' } });
   assert.equal(await frame.evaluate(() => document.querySelector('#profile').hidden), true);
+  const tsTrailing = await frame.evaluate(() => {
+    const r = s => document.querySelector(s).getBoundingClientRect();
+    return r('#tabsearch').left >= r('#newtab').right && r('#tabsearch').left > r('#spacer').left && r('#tabsearch').right <= r('#winctl').left + 1;
+  });
+  assert.equal(tsTrailing, true, 'tab search must sit at the trailing edge next to the caption buttons');
 
   const menuInfo = await frame.evaluate(() => {
     mainMenu();
