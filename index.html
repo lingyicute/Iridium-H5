@@ -432,10 +432,16 @@ body.osdark .qc:hover,body.osdark .qpill:hover,body.osdark .qpwr:hover{filter:br
 .qbat{gap:4px;padding:0 12px 0 8px}
 .qpwr{gap:1px;padding:0 6px 0 10px;position:relative;overflow:hidden}
 .qpwr svg+svg{opacity:.8}
-.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;padding:0 2px 2px}
-.cal span{height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:13px}
-.cal .th{color:var(--os2);font-size:12px;font-weight:500}
-.cal .td{background:var(--osacc);color:var(--osaccfg);font-weight:500}
+#calbub{width:min(376px,calc(100vw - 16px));max-height:calc(100dvh - 64px);overflow-y:auto}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px;text-align:center;padding:0 2px 2px}
+.cal .th{height:28px;display:flex;align-items:center;justify-content:center;color:var(--os2);font-size:12px;font-weight:500}
+.cal .cday{height:42px;min-width:0;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--osfg);font-size:13px}
+.cal .daynum{width:36px;height:36px;display:flex;align-items:center;justify-content:center;border-radius:50%;flex:none}
+.cal .cday:not(:disabled):hover .daynum{background:var(--shelf-hov)}
+.cal .cday.outside{color:var(--os2);opacity:.65}
+.cal .selected:not(.td) .daynum{box-shadow:inset 0 0 0 2px var(--osacc)}
+.cal .td .daynum{background:var(--osacc);color:var(--osaccfg);font-weight:500}
+.cal .cday:focus-visible{outline:2px solid var(--osacc);outline-offset:-2px}
 /* 气泡启动器 (ChromeOS AppListBubbleView)：16dp 圆角 (kBubbleCornerRadius)；宽度 544dp (工作区 <1200dp) / 640dp，高度默认 688dp 且不超过 工作区高度-书架-16dp；搜索框无独立底色，下方以分隔线与内容区隔开，没有“应用”标题 */
 #lc{left:8px;bottom:56px;width:min(544px,calc(100vw - 16px));height:min(688px,calc(100dvh - 112px));padding:0;border-radius:16px;display:flex;flex-direction:column;overflow:hidden}
 @media (min-width:1200px){#lc{width:640px}}
@@ -2873,26 +2879,49 @@ function toggleLauncher(){
 }
 
 /* 独立日历气泡 (ChromeOS CalendarView：上下月箭头 + 今天胶囊) */
-let calM=null;
+let calM=null,calSelected=null;
+const calDateKey=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 function toggleCal(){
   if(osOpen==='cal'){closeOS();return}
   closeOS();closePopups();osOpen='cal';const dt=$('#datetray');dt&&dt.classList.add('on');syncShelf();
   const b=el('<div class="osb" id="calbub" tabindex="-1" role="dialog" aria-label="日历"></div>');document.body.append(b);
-  calM=new Date();drawCal(b);b.focus();
+  calM=new Date();calSelected=new Date();drawCal(b);b.focus();
+  const focusDate=()=>{const d=$(`[data-date="${calDateKey(calSelected)}"]`,b);d&&d.focus()};
   b.addEventListener('click',e=>{
+    const day=e.target.closest('[data-date]');
+    if(day&&!day.disabled){const [y,m,d]=day.dataset.date.split('-').map(Number);calSelected=new Date(y,m-1,d);drawCal(b);focusDate();return}
     const a=e.target.closest('[data-a]');if(!a)return;
     const k=a.dataset.a;
-    if(k==='today'){calM=new Date();drawCal(b)}
-    else if(k==='prev'){calM=new Date(calM.getFullYear(),calM.getMonth()-1,1);drawCal(b)}
-    else if(k==='next'){calM=new Date(calM.getFullYear(),calM.getMonth()+1,1);drawCal(b)}
+    if(k==='today'){calM=new Date();calSelected=new Date()}
+    else if(k==='prev')calM=new Date(calM.getFullYear(),calM.getMonth()-1,1);
+    else if(k==='next')calM=new Date(calM.getFullYear(),calM.getMonth()+1,1);
+    drawCal(b);$(`[data-a="${k}"]`,b).focus();
+  });
+  b.addEventListener('keydown',e=>{
+    const cell=e.target.closest('[data-date]');if(!cell||cell.disabled||e.altKey||e.ctrlKey||e.metaKey)return;
+    const [y,m,d]=cell.dataset.date.split('-').map(Number);let next=new Date(y,m-1,d);
+    if(e.key==='ArrowLeft')next.setDate(d-1);
+    else if(e.key==='ArrowRight')next.setDate(d+1);
+    else if(e.key==='ArrowUp')next.setDate(d-7);
+    else if(e.key==='ArrowDown')next.setDate(d+7);
+    else if(e.key==='Home')next.setDate(d-next.getDay());
+    else if(e.key==='End')next.setDate(d+6-next.getDay());
+    else if(e.key==='PageUp'||e.key==='PageDown'){const nm=m-1+(e.key==='PageUp'?-1:1);next=new Date(y,nm,Math.min(d,new Date(y,nm+1,0).getDate()))}
+    else return;
+    e.preventDefault();e.stopPropagation();calSelected=next;calM=new Date(next.getFullYear(),next.getMonth(),1);drawCal(b);focusDate();
   });
 }
 function drawCal(b){
   const y=calM.getFullYear(),m=calM.getMonth(),first=new Date(y,m,1).getDay(),n=new Date(y,m+1,0).getDate(),td=new Date();
-  let c='';['日','一','二','三','四','五','六'].forEach(x=>c+=`<span class="th">${x}</span>`);
-  for(let i=0;i<first;i++)c+='<span></span>';
-  for(let d=1;d<=n;d++)c+=`<span class="${td.getFullYear()===y&&td.getMonth()===m&&td.getDate()===d?'td':''}">${d}</span>`;
-  b.innerHTML=`<div class="qhead"><b>${y}年${m+1}月</b><button class="qtoday" data-a="today">今天</button><button class="qc" data-a="prev" title="上个月">${svg(P.up,18)}</button><button class="qc" data-a="next" title="下个月">${svg(P.down,18)}</button></div><div class="cal">${c}</div>`;
+  const today=calDateKey(td),selected=calSelected?calDateKey(calSelected):'';
+  const focusDay=calSelected&&calSelected.getFullYear()===y&&calSelected.getMonth()===m?calSelected.getDate():td.getFullYear()===y&&td.getMonth()===m?td.getDate():1;
+  let c='';['日','一','二','三','四','五','六'].forEach(x=>c+=`<span class="th" aria-hidden="true">${x}</span>`);
+  // CalendarMonthView fills complete weeks with disabled, subdued adjacent dates.
+  for(let i=0;i<Math.ceil((first+n)/7)*7;i++){
+    const date=new Date(y,m,i-first+1),key=calDateKey(date),inside=date.getMonth()===m,isToday=inside&&key===today,isSelected=inside&&key===selected;
+    c+=`<button class="cday${inside?'':' outside'}${isToday?' td':''}${isSelected?' selected':''}" data-date="${key}" aria-label="${date.toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'})}"${isToday?' aria-current="date"':''}${inside?` aria-pressed="${isSelected}"`:' disabled'} tabindex="${inside&&date.getDate()===focusDay?0:-1}"><span class="daynum">${date.getDate()}</span></button>`;
+  }
+  b.innerHTML=`<div class="qhead"><b id="cal-title">${y}年${m+1}月</b><button class="qtoday" data-a="today">今天</button><button class="qc" data-a="prev" title="上个月">${svg(P.up,18)}</button><button class="qc" data-a="next" title="下个月">${svg(P.down,18)}</button></div><div class="cal" role="group" aria-labelledby="cal-title">${c}</div>`;
 }
 
 /* 快速设置 (ChromeOS Material You QsRevamp) */
