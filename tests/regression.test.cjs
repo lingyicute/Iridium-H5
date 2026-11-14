@@ -999,3 +999,26 @@ test('calendar keyboard selection crosses leap months and years without losing f
   await page.locator('#calbub [data-a="next"]').click();
   assert.equal(await page.locator('#calbub [data-a="next"]').evaluate(e => e === document.activeElement), true);
 });
+
+test('system focus rings belong to controls and ignore the browser accent', async t => {
+  const { page, frame } = await desktop(t, { settings: { accent: 'rose' } });
+  await frame.waitForFunction(() => document.activeElement.id === 'url');
+  for (const dark of [false, true]) {
+    const expected = dark ? 'rgb(168, 199, 250)' : 'rgb(11, 87, 208)';
+    await page.evaluate(dark => { closeOS(); OS.dark = dark; applyOS(); toggleQS(); }, dark);
+    assert.equal(await page.locator('#qs').evaluate(e => getComputedStyle(e).outlineWidth), '0px');
+    await page.keyboard.press('Tab');
+    assert.equal(await page.locator('#qs :focus-visible').evaluate(e => getComputedStyle(e).outlineColor), expected);
+    await page.evaluate(() => toggleCal());
+    assert.equal(await page.locator('#calbub').evaluate(e => getComputedStyle(e).outlineWidth), '0px');
+    await page.keyboard.press('Tab');
+    await page.waitForFunction(color => { const e = document.querySelector('#calbub :focus-visible'); return e && getComputedStyle(e).outlineColor === color; }, expected);
+    assert.equal(await page.locator('#calbub :focus-visible').evaluate(e => getComputedStyle(e).outlineColor), expected);
+    await page.evaluate(() => { closeOS(); openOsSettings('network'); });
+    await page.locator('#osset .sw input').focus();
+    await page.keyboard.press('Shift+Tab');
+    await page.keyboard.press('Tab');
+    await page.waitForFunction(() => getComputedStyle(document.querySelector('#osset .sw span')).outlineWidth === '2px');
+    assert.deepEqual(await page.locator('#osset .sw span').evaluate(e => ({ color: getComputedStyle(e).outlineColor, width: getComputedStyle(e).outlineWidth })), { color: expected, width: '2px' });
+  }
+});

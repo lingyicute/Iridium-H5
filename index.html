@@ -400,6 +400,10 @@ body.fs #shelf{display:none}
 .menu.osmenu .ms{background:var(--osline)}
 /* 启动器 / 快速设置 / 日历气泡 (ChromeOS Material You / Jelly) */
 .osb{position:fixed;z-index:3100;background:var(--osb);color:var(--osfg);border-radius:24px;box-shadow:0 0 0 1px var(--osline),0 8px 32px rgba(0,0,0,.35);-webkit-backdrop-filter:blur(30px) saturate(1.8);backdrop-filter:blur(30px) saturate(1.8);animation:osup .16s cubic-bezier(.2,.8,.2,1);user-select:none}
+/* Tray containers are focus anchors, not controls; browser accents stay in Chrome. */
+#qs,#calbub{outline:0}
+#shelf :focus-visible,.osb :focus-visible,.snapbub :focus-visible,.osmenu :focus-visible,#osset :focus-visible{outline-color:var(--osacc)}
+#osset .sw input:focus-visible+span{outline:2px solid var(--osacc);outline-offset:2px}
 @keyframes osup{from{opacity:0;transform:translateY(14px) scale(.98)}to{opacity:1;transform:none}}
 #qs,#calbub{right:8px;bottom:56px;width:376px;padding:16px}
 .qhead{display:flex;align-items:center;gap:6px;margin:0 4px 12px}
