@@ -1068,3 +1068,15 @@ test('desktop applies saved OS appearance before WM initialization without start
     hasWallpaper: document.querySelector('#desktop').style.background.length > 0,
   })), { dark: true, dim: 0.15, night: 0.35, hasWallpaper: true });
 });
+
+test('launcher keeps URL-like input on the web search row even when an app name matches', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.waitForFunction(() => document.activeElement.id === 'url');
+  await page.evaluate(() => { APPS.push({ ...APPS[0], n: 'example.com' }); });
+  await page.locator('#launcher').click();
+  await page.locator('#lc input').fill('example.com');
+  assert.equal(await page.locator('.lresult').count(), 2);
+  assert.equal(await page.locator('.lresult.sel').getAttribute('id'), 'launcher-web');
+  await page.locator('#lc input').fill('example');
+  assert.equal(await page.locator('.lresult.sel').getAttribute('id'), 'launcher-result-0');
+});

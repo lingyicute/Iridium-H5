@@ -2866,7 +2866,8 @@ function toggleLauncher(){
     clear.hidden=!inp.value;g.classList.toggle('searching',!!q);g.setAttribute('role',q?'listbox':'group');
     inp.setAttribute('aria-expanded',String(!!q));
     g.innerHTML=q?match(q).map((a,i)=>`<button class="lresult" id="launcher-result-${i}" role="option" tabindex="-1" data-a="${a.id}">${appIcon(a,32)}<span>${esc(a.n)}</span></button>`).join('')+`<button class="lresult" id="launcher-web" role="option" tabindex="-1" data-web><span class="lwebicon">${svg(P.search,20)}</span><span>在网络上搜索“${esc(inp.value.trim())}”</span></button>`:APPS.map(a=>`<button class="lapp" data-a="${a.id}">${appIcon(a,48)}<span>${esc(a.n)}</span></button>`).join('');
-    selected=0;select();
+    // 与旧行为一致：像网址的输入默认选中“在网络上搜索”行，其余默认选中第一个应用。
+    selected=q&&looksLikeUrl(inp.value.trim())?$$('.lresult',g).length-1:0;select();
   };
   const reset=()=>{inp.value='';draw();inp.focus()};
   draw();inp.oninput=draw;clear.onclick=reset;inp.focus();
