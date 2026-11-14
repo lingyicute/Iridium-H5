@@ -844,3 +844,22 @@ test('shelf status tray order, app indicators and wallpaper menu follow ChromeOS
   await page.evaluate(() => lockScreen());
   assert.equal(await page.evaluate(() => document.querySelector('#lock .lstat').firstElementChild.textContent === hhmm()), true);
 });
+
+test('desktop toast and snap preview follow ChromeOS system styling', async t => {
+  const { page, frame } = await desktop(t);
+  const light = await page.evaluate(() => {
+    toast('测试提示');
+    const el = document.querySelector('#toast'), cs = getComputedStyle(el);
+    return { bg: cs.backgroundColor, bottom: cs.bottom, height: el.offsetHeight };
+  });
+  assert.deepEqual(light, { bg: 'rgba(255, 255, 255, 0.8)', bottom: '56px', height: 36 });
+  assert.equal(await page.evaluate(() => { OS.dark = true; applyOS(); return getComputedStyle(document.querySelector('#toast')).backgroundColor; }), 'rgba(32, 33, 36, 0.8)');
+  assert.equal(await frame.evaluate(() => getComputedStyle(document.querySelector('#toast')).backgroundColor), 'rgb(60, 64, 67)');
+
+  const phantom = await page.evaluate(() => {
+    snapHint({ clientX: 0, clientY: 300 });
+    const r = document.querySelector('#snapprev').getBoundingClientRect();
+    return [r.left, r.top, Math.round(r.width), Math.round(r.height)];
+  });
+  assert.deepEqual(phantom, [8, 8, Math.round(1280 / 2 - 16), 800 - 48 - 16]);
+});

@@ -515,6 +515,10 @@ body.max #winctl button{height:32px}
 .snapbub i{position:absolute;top:0;bottom:0;background:var(--blue);opacity:.65}
 .snapbub button:hover i{opacity:1}
 #toast{bottom:64px;border-radius:18px;background:#3c4043;padding:10px 20px}
+/* 桌面系统提示 (ChromeOS SystemToastView)：80% 底色 + 背景模糊、胶囊形、8dp/16dp 内边距、文字最宽 512dp，距书架 8dp */
+body.host #toast{bottom:56px;max-width:544px;padding:8px 16px;border-radius:18px;line-height:20px;background:rgba(255,255,255,.8);color:var(--osfg);-webkit-backdrop-filter:blur(30px);backdrop-filter:blur(30px);box-shadow:0 0 0 1px var(--osline),0 4px 12px rgba(0,0,0,.2)}
+body.host.osdark #toast{background:rgba(32,33,36,.8)}
+body.host.wfs #toast{bottom:8px}
 ::-webkit-scrollbar{width:12px;height:12px}
 ::-webkit-scrollbar-thumb{background:rgba(128,128,128,.45);border:3px solid transparent;background-clip:padding-box;border-radius:8px}
 /* ================= Chromium 最新桌面版 (Chrome Refresh 2023+) 精修 ================= */
@@ -3015,7 +3019,8 @@ function snapHint(ev){
   const p=$('#snapprev'),W=innerWidth,H=innerHeight-48;let r=null;
   if(ev.clientY<=2)r=[0,0,W,H];else if(ev.clientX<=2)r=[0,0,W/2,H];else if(ev.clientX>=W-2)r=[W/2,0,W/2,H];
   if(!r){p.style.display='none';return}
-  Object.assign(p.style,{display:'block',left:r[0]+'px',top:r[1]+'px',width:r[2]+'px',height:r[3]+'px'});
+  /* ChromeOS PhantomWindowController：预览区域向内收缩 8dp (kPhantomWindowInsets) */
+  Object.assign(p.style,{display:'block',left:r[0]+8+'px',top:r[1]+8+'px',width:r[2]-16+'px',height:r[3]-16+'px'});
 }
 function multitaskHtml(){return '<div class="snapbub" role="menu" aria-label="窗口布局菜单"><div class="mcell"><div class="mbox"><button data-s="l" style="flex:1" title="靠左半屏"></button><button data-s="r" style="flex:1" title="靠右半屏"></button></div><span>分屏</span></div><div class="mcell"><div class="mbox"><button data-s="l2" style="flex:2" title="左侧 2/3 分屏"></button><button data-s="r1" style="flex:1" title="右侧 1/3 分屏"></button></div><span>部分</span></div><div class="mcell"><div class="mbox full"><button data-s="fs" title="全屏"></button></div><span>全屏</span></div><div class="mcell"><div class="mbox flt"><button data-s="flt" title="浮动在顶部"></button></div><span>浮动</span></div></div>'}
 let sbT;
@@ -4035,7 +4040,8 @@ render();
     const W=innerWidth,h=H();let r=null;
     if(p[1]<=2)r=[0,0,W,h];else if(p[0]<=2)r=[0,0,W/2,h];else if(p[0]>=W-2)r=[W/2,0,W/2,h];
     if(!r){s.style.display='none';return}
-    Object.assign(s.style,{display:'block',left:r[0]+'px',top:r[1]+'px',width:r[2]+'px',height:r[3]+'px'});
+    /* 与 ChromeOS 贴靠预览一致：目标区域四周内缩 8dp */
+    Object.assign(s.style,{display:'block',left:r[0]+8+'px',top:r[1]+8+'px',width:r[2]-16+'px',height:r[3]-16+'px'});
   }
   function dragAt(px,py,btn){
     if(!D)return;
