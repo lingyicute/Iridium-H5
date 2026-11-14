@@ -425,10 +425,13 @@ body.osdark .qt:hover{filter:brightness(1.08)}
 .qsl input[type=range]{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer;z-index:1}
 .qbot{display:flex;align-items:center;gap:6px;margin-top:14px;padding-top:12px;border-top:1px solid var(--osline)}
 .qc{width:34px;height:34px;border-radius:50%;background:var(--ostile);display:flex;align-items:center;justify-content:center;color:var(--osfg);flex:none}
-.qc:hover,.qpill:hover{filter:brightness(.95)}
-body.osdark .qc:hover,body.osdark .qpill:hover{filter:brightness(1.1)}
+.qc:hover,.qpill:hover,.qpwr:hover{filter:brightness(.95)}
+body.osdark .qc:hover,body.osdark .qpill:hover,body.osdark .qpwr:hover{filter:brightness(1.1)}
 .qpill{height:34px;padding:0 14px;border-radius:17px;background:var(--ostile);font-size:12.5px;font-weight:500;color:var(--osfg);white-space:nowrap;flex:none}
-.qbat{font-size:12px;color:var(--os2);margin:0 4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.qbat,.qpwr{display:flex;align-items:center;height:34px;border-radius:17px;background:var(--ostile);color:var(--osfg);font-size:12.5px;font-weight:500;white-space:nowrap;flex:none}
+.qbat{gap:4px;padding:0 12px 0 8px}
+.qpwr{gap:1px;padding:0 6px 0 10px;position:relative;overflow:hidden}
+.qpwr svg+svg{opacity:.8}
 .cal{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;padding:0 2px 2px}
 .cal span{height:38px;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:13px}
 .cal .th{color:var(--os2);font-size:12px;font-weight:500}
@@ -2730,7 +2733,9 @@ Object.assign(P,{
   power:'M13 3h-2v10h2V3zm4.83 2.17l-1.42 1.42C17.99 7.86 19 9.81 19 12c0 3.87-3.13 7-7 7s-7-3.13-7-7c0-2.19 1.01-4.14 2.58-5.42L6.17 5.17C4.23 6.82 3 9.26 3 12c0 4.97 4.03 9 9 9s9-4.03 9-9c0-2.74-1.23-5.18-3.17-6.83z',
   cal:'M19 3h-1V1h-2v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V8h14v11z',
   wifiOff:'M22.99 9C19.15 5.16 13.8 3.76 8.84 4.78l2.52 2.52c3.47-.17 6.99 1.05 9.63 3.7l2-2zm-4 4c-1.29-1.29-2.84-2.13-4.49-2.56l3.53 3.53.96-.97zM2 3.05 5.07 6.1C3.6 6.82 2.22 7.78 1 9l2 2c1.23-1.23 2.65-2.16 4.17-2.78l2.24 2.24C7.79 10.89 6.27 11.74 5 13l2 2c1.35-1.35 3.11-2.04 4.89-2.06l7.08 7.08L20.24 18.75 3.27 1.78 2 3.05zM9 17l3 3 3-3c-1.65-1.66-4.34-1.66-6 0z',
-  dnd:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z'
+  dnd:'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11H7v-2h10v2z',
+  contrast:'M12 22c5.52 0 10-4.48 10-10S17.52 2 12 2 2 6.48 2 12s4.48 10 10 10zm1-17.93c3.94.49 7 3.85 7 7.93s-3.05 7.44-7 7.93V4.07z',
+  capture:'M3 5a2 2 0 012-2h3v2H5v3H3V5zm13-2h3a2 2 0 012 2v3h-2V5h-3V3zM3 16h2v3h3v2H5a2 2 0 01-2-2v-3zm16 0h2v3a2 2 0 01-2 2h-3v-2h3v-3zm-7-8a4 4 0 110 8 4 4 0 010-8z'
 });
 const OS=Object.assign({dark:null,wall:0,wifi:true,bt:false,dnd:false,night:false,bright:100,vol:70,autohide:false},store.get('os',{}));
 const saveOS=()=>store.set('os',OS);
@@ -2877,19 +2882,17 @@ function toggleQS(cal){
     const a=e.target.closest('[data-a]');if(!a)return;
     const k=a.dataset.a;
     if(k==='cal')toggleCal();
-    else if(k==='lock')lockScreen();
-    else if(k==='signout')lockScreen(true);
-    else if(k==='power')powerOff();
+    else if(k==='pwr'){const r=a.getBoundingClientRect(),ic=p=>svg(p,18);showOsMenu([{label:'关机',icon:ic(P.power),fn:()=>powerOff()},{label:'重启',icon:ic(P.reload),fn:()=>powerOff(true)},{label:'退出',icon:ic(P.exit),fn:()=>lockScreen(true)},{label:'锁定',icon:ic(P.lock),fn:()=>lockScreen()}],r.left,r.top-6,true)}
     else if(k==='set'){closeOS();openOsSettings()}
   });
 }
 function drawQS(b){
   const tile=(k,ic,l,s,on)=>`<button class="qt${on?' on':''}" data-t="${k}"><span class="qi">${svg(ic,20)}</span><span class="qx"><b>${l}</b>${s?`<i>${s}</i>`:''}</span></button>`;
   const bp=Math.round((OS.bright-20)/80*100);
-  b.innerHTML=`<div class="qtiles">${tile('wifi',P.wifi,'网络',OS.wifi?'Iridium-5G':'已关闭',OS.wifi)}${tile('bt',P.bt,'蓝牙',OS.bt?'已开启':'已关闭',OS.bt)}${tile('dnd',P.dnd,'勿扰模式',OS.dnd?'已开启':'已关闭',OS.dnd)}${tile('dark',P.moon,'深色主题',isOsDark()?'已开启':'已关闭',isOsDark())}${tile('night',P.sun,'夜间模式',OS.night?'已开启':'已关闭',OS.night)}${tile('shot',P.cam,'屏幕截图','选取或截取全屏',false)}</div>
-  <div class="qsl" style="--p:${bp}"><span class="qsi">${svg(P.bright,20)}</span><input type="range" min="20" max="100" value="${OS.bright}" data-s="bright" aria-label="亮度"></div>
+  b.innerHTML=`<div class="qtiles">${tile('wifi',P.wifi,'网络',OS.wifi?'Iridium-5G':'已关闭',OS.wifi)}${tile('bt',P.bt,'蓝牙',OS.bt?'已开启':'已关闭',OS.bt)}${tile('dnd',P.dnd,'勿扰模式',OS.dnd?'已开启':'已关闭',OS.dnd)}${tile('dark',P.contrast,'深色主题',isOsDark()?'已开启':'已关闭',isOsDark())}${tile('night',P.moon,'夜灯',OS.night?'已开启':'已关闭',OS.night)}${tile('shot',P.capture,'屏幕截图','',false)}</div>
   <div class="qsl${OS.vol?'':' muted'}" style="--p:${OS.vol}"><button class="qsi" data-m="vol" title="${OS.vol?'静音':'取消静音'}">${svg(OS.vol?P.vol:P.volOff,20)}</button><input type="range" min="0" max="100" value="${OS.vol}" data-s="vol" aria-label="音量"></div>
-  <div class="qbot"><button class="qpill" data-a="signout">退出登录</button><button class="qc" data-a="lock" title="锁定">${svg(P.lock,18)}</button><button class="qc" data-a="power" title="关机">${svg(P.power,18)}</button><span style="flex:1"></span><span class="qbat">${BAT.l}%${BAT.c?' · 充电中':''}</span><button class="qc" data-a="set" title="设置">${svg(P.gear,18)}</button></div>`;
+  <div class="qsl" style="--p:${bp}"><span class="qsi">${svg(P.bright,20)}</span><input type="range" min="20" max="100" value="${OS.bright}" data-s="bright" aria-label="亮度"></div>
+  <div class="qbot"><button class="qpwr" data-a="pwr" title="电源菜单" aria-haspopup="menu">${svg(P.power,18)}${svg(P.down,16)}</button><span style="flex:1"></span><span class="qbat">${batIcon(BAT.l,BAT.c)}<span>${BAT.l}%${BAT.c?' · 正在充电':''}</span></span><button class="qc" data-a="set" title="设置">${svg(P.gear,18)}</button></div>`;
 }
 
 /* 锁屏 / 关机 */
@@ -2897,7 +2900,7 @@ function lockScreen(signedOut){
   closeOS();if($('#lock'))return;closePopups();hideSugg();hideHC();document.body.classList.add('locked');
   try{if(document.activeElement)document.activeElement.blur();window.focus()}catch(e){}
   const wf=netOn();
-  const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lt"><div class="tm">${hhmm()}</div><div>${dateStr()}</div></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:20px;font-weight:500">User</div><button class="lubtn">${signedOut?'点击或按 Enter 键登录':'点击或按 Enter 键解锁'}</button></div><div class="lshelf"><div class="lpills"><button class="lpill" data-lp="off">${svg(P.power,18)}<span>关机</span></button>${signedOut?'':`<button class="lpill" data-lp="out"><span>退出登录</span></button>`}</div><div class="lstat"><span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span>${hhmm()}</span></div></div></div>`);
+  const d=el(`<div id="lock"><div class="lbg" style="background:${(WALLS[OS.wall]||WALLS[0]).c}"></div><div class="lt"><div class="tm">${hhmm()}</div><div>${dateStr()}</div></div><div class="lc"><span class="avatar" style="width:96px;height:96px">${svg(P.person,64)}</span><div style="font-size:20px;font-weight:500">User</div><button class="lubtn">${signedOut?'点击或按 Enter 键登录':'点击或按 Enter 键解锁'}</button></div><div class="lshelf"><div class="lpills"><button class="lpill" data-lp="off">${svg(P.power,18)}<span>关机</span></button>${signedOut?'':`<button class="lpill" data-lp="out">${svg(P.exit,18)}<span>退出</span></button>`}</div><div class="lstat"><span style="display:flex;opacity:${wf?1:.65}">${svg(wf?P.wifi:P.wifiOff,18)}</span><span style="display:flex">${batIcon(BAT.l,BAT.c)}</span><span>${hhmm()}</span></div></div></div>`);
   document.body.append(d);$('.lubtn',d).focus();
   const un=()=>{d.remove();document.body.classList.remove('locked');document.removeEventListener('keydown',kh,true)};
   const kh=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();e.stopPropagation();un()}};
@@ -2909,8 +2912,9 @@ function lockScreen(signedOut){
     un();
   };
 }
-function powerOff(){
+function powerOff(restart){
   closeOS();
+  if(restart===true){document.body.append(el(`<div id="poff">${IRI(56)}<div>正在重启…</div></div>`));setTimeout(()=>location.reload(),1200);return}
   const d=el(`<div id="poff">${svg(P.power,56)}<div>您的 IridiumBook 已关机</div><button class="btn" style="color:#e8eaed;border-color:#5f6368">开机</button></div>`);
   document.body.append(d);d.onclick=()=>location.reload();
 }
@@ -2918,7 +2922,7 @@ function powerOff(){
 /* 设置 */
 function openOsSettings(sec){
   if(EMB&&window.IWM){IWM.post('osset',{sec:sec||''});return}
-  const SEC=[['network','网络',P.wifi,'wifi 无线 移动数据'],['bt','蓝牙',P.bt,'bluetooth 设备'],['personal','个性化',P.edit,'外观 浅色 深色 壁纸 主题'],['display','显示器',P.bright,'亮度 夜间模式 屏幕 蓝光 书架'],['about','关于 IridiumOS',P.info,'版本 浏览器 平台 设备 IridiumBook']];
+  const SEC=[['network','网络',P.wifi,'wifi 无线 移动数据'],['bt','蓝牙',P.bt,'bluetooth 设备'],['personal','个性化',P.edit,'外观 浅色 深色 壁纸 主题'],['display','显示器',P.bright,'亮度 夜灯 夜间模式 屏幕 蓝光 书架'],['about','关于 IridiumOS',P.info,'版本 浏览器 平台 设备 IridiumBook']];
   const valid=s=>SEC.some(x=>x[0]===s);
   const old=$('#osset');
   if(old){if(sec&&valid(sec))old._setSec(sec);old._focus();return}
@@ -2933,7 +2937,7 @@ function openOsSettings(sec){
     if(id==='network')return `<h2>网络</h2><div class="oscard">${row('Wi-Fi',OS.wifi?'已连接到 Iridium-5G':'已关闭',sw('wifi',OS.wifi))}${row('移动数据','未检测到 SIM 卡')}</div>`;
     if(id==='bt')return `<h2>蓝牙</h2><div class="oscard">${row('蓝牙',OS.bt?'正在搜索设备…':'已关闭',sw('bt',OS.bt))}</div>`;
     if(id==='personal'){const dm=OS.dark==null?'auto':OS.dark?'dark':'light';return `<h2>个性化</h2><h4>外观</h4><div class="oseg">${[['light','浅色'],['dark','深色'],['auto','自动']].map(x=>`<button data-dk="${x[0]}" class="${dm===x[0]?'on':''}">${x[1]}</button>`).join('')}</div><h4>壁纸</h4><div class="wpg">${WALLS.map((x,i)=>`<button data-w="${i}" class="${OS.wall===i?'on':''}" style="background:${x.c}">${x.n}</button>`).join('')}</div>`}
-    if(id==='display')return `<h2>显示器</h2><div class="oscard">${row('亮度','',`<input type="range" min="20" max="100" value="${OS.bright}" data-r="bright" style="width:200px;accent-color:var(--osacc)">`)}${row('夜间模式','降低屏幕蓝光',sw('night',OS.night))}${row('自动隐藏书架','打开窗口时自动收起底部书架',sw('autohide',!!OS.autohide))}</div>`;
+    if(id==='display')return `<h2>显示器</h2><div class="oscard">${row('亮度','',`<input type="range" min="20" max="100" value="${OS.bright}" data-r="bright" style="width:200px;accent-color:var(--osacc)">`)}${row('夜灯','让屏幕在昏暗光线下更易于查看或阅读',sw('night',OS.night))}${row('自动隐藏书架','打开窗口时自动收起底部书架',sw('autohide',!!OS.autohide))}</div>`;
     return `<h2>关于 IridiumOS</h2><div class="oscard"><div class="osrow" style="padding:24px 20px;gap:18px">${IRI(56)}<div class="stx"><div class="st" style="font-size:20px">IridiumOS</div><div class="sd">Made with love by lingyicute</div></div></div>${row('版本','16093.57.0（正式版本）稳定版渠道（64 位）')}${row('浏览器',`Iridium ${VERSION}`)}${row('平台','x86_64 · iframe 模式')}${row('设备名称','IridiumBook')}</div>`;
   };
   const draw=()=>{
