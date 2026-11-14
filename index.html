@@ -2782,9 +2782,9 @@ if(navigator.getBattery)navigator.getBattery().then(b=>{const u=()=>{BAT={l:Math
 function syncShelf(){
   if(EMB)return;
   const os=$('#osset'),osVis=!!(os&&!os._min),osMax=!!(osVis&&os.classList.contains('max'));
-  const ws=window.WM?WM.wins:[];
-  const winVis=WM?ws.some(w=>!w.min&&!w.closing):(win.open&&!win.min);
-  const winMax=WM?ws.some(w=>!w.min&&!w.closing&&w.max&&!w.fs):(win.open&&!win.min&&win.max);
+  const wm=window.WM,ws=wm?wm.wins:[];
+  const winVis=wm?ws.some(w=>!w.min&&!w.closing):(win.open&&!win.min);
+  const winMax=wm?ws.some(w=>!w.min&&!w.closing&&w.max&&!w.fs):(win.open&&!win.min&&win.max);
   const b=document.body.classList;
   b.toggle('shmax',osMax||winMax);
   b.toggle('shauto',!!OS.autohide);

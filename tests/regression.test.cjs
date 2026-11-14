@@ -47,6 +47,8 @@ async function desktop(t, seed = {}) {
     sessionStorage.setItem('test.seeded', '1');
   }, seed);
   const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', error => errors.push(error.message));
   page.setDefaultTimeout(3500);
   await page.goto(base, { waitUntil: 'domcontentloaded' });
   await page.waitForFunction(() => window.WM && WM.wins.length === 1 && WM.wins[0].ready);
@@ -56,7 +58,7 @@ async function desktop(t, seed = {}) {
   // WM.ready precedes iframe presentation and the deferred omnibox autofocus.
   await page.waitForFunction(() => WM.wins[0].fr.classList.contains('rdy'));
   await frame.waitForFunction(() => !isNtpUrl(cur().url) || document.activeElement.id === 'url');
-  return { page, frame, context };
+  return { page, frame, context, errors };
 }
 
 async function key(frame, options, target = 'body') {
@@ -1053,4 +1055,16 @@ test('a delayed native fullscreen entry cannot hide the shelf after minimization
   await page.waitForFunction(() => !document.fullscreenElement);
   assert.equal(await page.evaluate(() => window.__nativeExitCount), 1);
   assert.equal(await page.evaluate(() => WM.wins[0].fs || document.body.classList.contains('wfs')), false);
+});
+
+
+test('desktop applies saved OS appearance before WM initialization without startup errors', async t => {
+  const { page, errors } = await desktop(t, { os: { dark: true, wall: 2, bright: 80, night: true } });
+  assert.deepEqual(errors, []);
+  assert.deepEqual(await page.evaluate(() => ({
+    dark: document.body.classList.contains('osdark'),
+    dim: Number(document.querySelector('#dim').style.opacity),
+    night: Number(document.querySelector('#night').style.opacity),
+    hasWallpaper: document.querySelector('#desktop').style.background.length > 0,
+  })), { dark: true, dim: 0.15, night: 0.35, hasWallpaper: true });
 });
