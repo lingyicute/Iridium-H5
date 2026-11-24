@@ -1142,3 +1142,16 @@ test('quick settings use Ash primary and compact tile rows and container colors'
   assert.equal(await page.locator('#qs').evaluate(e => e.offsetWidth), 344);
   assert.ok(await page.locator('#qs').evaluate(e => e.getBoundingClientRect().top >= 0));
 });
+
+test('snapped windows switch the shelf to the square maximized ChromeOS style', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.locator('#wmax').click();
+  await page.waitForFunction(() => getComputedStyle(document.querySelector('#shelf')).borderTopLeftRadius === '24px');
+  await frame.evaluate(() => IWM.post('snapl'));
+  await page.waitForFunction(() => WM.wins[0].snap === 'l' && getComputedStyle(document.querySelector('#shelf')).borderTopLeftRadius === '0px');
+  assert.equal(await page.evaluate(() => document.body.classList.contains('shmax')), true);
+  await frame.evaluate(() => IWM.post('togglemax'));
+  await frame.evaluate(() => IWM.post('togglemax'));
+  await page.waitForFunction(() => !WM.wins[0].max && !WM.wins[0].snap && getComputedStyle(document.querySelector('#shelf')).borderTopLeftRadius === '24px');
+});
+

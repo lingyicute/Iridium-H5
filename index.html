@@ -2794,7 +2794,8 @@ function syncShelf(){
   const os=$('#osset'),osVis=!!(os&&!os._min),osMax=!!(osVis&&os.classList.contains('max'));
   const wm=window.WM,ws=wm?wm.wins:[];
   const winVis=wm?ws.some(w=>!w.min&&!w.closing):(win.open&&!win.min);
-  const winMax=wm?ws.some(w=>!w.min&&!w.closing&&w.max&&!w.fs):(win.open&&!win.min&&win.max);
+  /* ChromeOS ShelfLayoutManager：最大化或贴靠分屏窗口激活时书架均切换为直角不透明 */
+  const winMax=wm?ws.some(w=>!w.min&&!w.closing&&(w.max||w.snap)&&!w.fs):(win.open&&!win.min&&win.max);
   const b=document.body.classList;
   b.toggle('shmax',osMax||winMax);
   b.toggle('shauto',!!OS.autohide);
@@ -4076,7 +4077,7 @@ render();
   function startResize(w,h,e){
     if(e.button!==0||w.max||w.fs||ov)return;
     e.preventDefault();e.stopPropagation();focusWin(w,true);cancelAn(w);
-    if(w.snap){w.snap=null;push(w)}
+    if(w.snap){w.snap=null;pushAll()}
     D={w:w,kind:'resize',dir:h.dataset.d,px0:e.clientX,py0:e.clientY,b0:clone(w.b),ofx:0,ofy:0,started:true};
     shieldOn(getComputedStyle(h).cursor);document.body.classList.add('wdrag');
   }
