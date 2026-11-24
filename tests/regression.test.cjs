@@ -1155,3 +1155,23 @@ test('snapped windows switch the shelf to the square maximized ChromeOS style', 
   await page.waitForFunction(() => !WM.wins[0].max && !WM.wins[0].snap && getComputedStyle(document.querySelector('#shelf')).borderTopLeftRadius === '24px');
 });
 
+test('auto-hide shelf expands snapped work area and retracts after closing system bubbles', async t => {
+  const { page, frame } = await desktop(t);
+  await frame.evaluate(() => IWM.post('snapl'));
+  await page.waitForFunction(() => WM.wins[0].snap === 'l' && WM.wins[0].b.h === 800 - 48);
+  await page.evaluate(() => toggleAutohide());
+  assert.equal(await page.evaluate(() => WM.wins[0].b.h), 800);
+  const phantom = await page.evaluate(() => {
+    snapHint({ clientX: 0, clientY: 300 });
+    return Math.round(document.querySelector('#snapprev').getBoundingClientRect().height);
+  });
+  assert.equal(phantom, 800 - 16);
+  await page.evaluate(() => toggleLauncher());
+  assert.equal(await page.evaluate(() => document.body.classList.contains('shpeek')), true);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.evaluate(() => document.body.classList.contains('shpeek')), false);
+  await page.evaluate(() => { openOsSettings('display'); });
+  await page.locator('#osset label.sw:has(input[data-o="autohide"])').click();
+  assert.equal(await page.evaluate(() => WM.wins[0].b.h), 800 - 48);
+});
+

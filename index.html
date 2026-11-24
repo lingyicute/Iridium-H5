@@ -2853,7 +2853,7 @@ function updateShelf(){const s=$('#sh-iri');if(!s)return;s.classList.toggle('run
 
 /* 气泡管理 */
 let osOpen='';
-function closeOS(){$$('.osb').forEach(x=>x.remove());osOpen='';$('#status').classList.remove('on');const dt=$('#datetray');dt&&dt.classList.remove('on');$('#launcher').classList.remove('lon');if(!OS.autohide)document.body.classList.remove('shpeek')}
+function closeOS(){$$('.osb').forEach(x=>x.remove());osOpen='';$('#status').classList.remove('on');const dt=$('#datetray');dt&&dt.classList.remove('on');$('#launcher').classList.remove('lon');document.body.classList.remove('shpeek')}
 document.addEventListener('mousedown',e=>{if(osOpen&&!e.target.closest('.osb,#status,#datetray,#launcher'))closeOS()},true);
 window.addEventListener('blur',closeOS);
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOS()});
@@ -3061,7 +3061,7 @@ function openOsSettings(sec){
     const dk=e.target.closest('[data-dk]');if(dk){OS.dark=dk.dataset.dk==='auto'?null:dk.dataset.dk==='dark';saveOS();applyOS();applySettings();draw();return}
     const wp=e.target.closest('[data-w]');if(wp){OS.wall=+wp.dataset.w;saveOS();applyOS();draw()}
   });
-  w.addEventListener('change',e=>{const k=e.target.dataset.o;if(!k)return;OS[k]=e.target.checked;saveOS();applyOS();draw()});
+  w.addEventListener('change',e=>{const k=e.target.dataset.o;if(!k)return;OS[k]=e.target.checked;saveOS();applyOS();if(k==='autohide')dispatchEvent(new Event('resize'));draw()});
   w.addEventListener('input',e=>{if(e.target.dataset.r){OS.bright=+e.target.value;saveOS();applyOS()}});
   $('.osh',w).ondblclick=e=>{if(!e.target.closest('button'))toggleMax()};
   $('.osh',w).onmousedown=e=>{
@@ -3093,7 +3093,7 @@ document.addEventListener('mousemove',e=>{
 
 /* 窗口吸附预览与最大化悬停气泡 */
 function snapHint(ev){
-  const p=$('#snapprev'),W=innerWidth,H=innerHeight-48;let r=null;
+  const p=$('#snapprev'),W=innerWidth,H=innerHeight-(OS.autohide?0:48);let r=null;
   if(ev.clientY<=2)r=[0,0,W,H];else if(ev.clientX<=2)r=[0,0,W/2,H];else if(ev.clientX>=W-2)r=[W/2,0,W/2,H];
   if(!r){p.style.display='none';return}
   /* ChromeOS PhantomWindowController：预览区域向内收缩 8dp (kPhantomWindowInsets) */
@@ -3843,7 +3843,7 @@ render();
   function forgetClosed(id){const i=recent.findIndex(x=>x.kind==='tab'&&x.tab.closedId===id);if(i>=0){recent.splice(i,1);broadcast()}}
   let zc=0,focus=null,D=null,ov=null,sbT=0,seq=0,bcT=0;
   const byId=id=>wins.find(w=>w.id===id);
-  const H=()=>innerHeight-48;
+  const H=()=>OS.autohide?innerHeight:innerHeight-48;
   const clone=b=>({x:b.x,y:b.y,w:b.w,h:b.h});
   const validBounds=b=>isRecord(b)&&['x','y','w','h'].every(k=>Number.isFinite(b[k]))&&b.w>0&&b.h>0;
   const savedWindow=w=>isRecord(w)&&typeof w.id==='string'&&!!w.id&&validBounds(w.b);
@@ -4221,7 +4221,7 @@ render();
     ov.labels.forEach(l=>l.remove());ov.labels=[];if(ov.empty){ov.empty.remove();ov.empty=null}
     const list=wins.filter(w=>!w.closing).sort((a,b)=>a.seq-b.seq),n=list.length;
     if(!n){ov.empty=el('<div class="ovempty">没有最近使用的内容</div>');document.body.append(ov.empty);return}
-    const W=innerWidth,top0=68,h=H()-top0,pad=34;
+    const W=innerWidth,top0=68,h=innerHeight-48-top0,pad=34;
     const cols=Math.min(n,Math.ceil(Math.sqrt(n*W/h))),rows=Math.ceil(n/cols),cw=W/cols,ch=h/rows;
     list.forEach((w,i)=>{
       const c=i%cols,r=Math.floor(i/cols),inRow=r===rows-1?n-(rows-1)*cols:cols,x0=(W-inRow*cw)/2;
