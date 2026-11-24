@@ -2853,10 +2853,14 @@ function updateShelf(){const s=$('#sh-iri');if(!s)return;s.classList.toggle('run
 
 /* 气泡管理 */
 let osOpen='';
-function closeOS(){$$('.osb').forEach(x=>x.remove());osOpen='';$('#status').classList.remove('on');const dt=$('#datetray');dt&&dt.classList.remove('on');$('#launcher').classList.remove('lon');document.body.classList.remove('shpeek')}
-document.addEventListener('mousedown',e=>{if(osOpen&&!e.target.closest('.osb,#status,#datetray,#launcher'))closeOS()},true);
+function closeOS(){if(layer.dataset.owner==='qspwr')closePopups();$$('.osb').forEach(x=>x.remove());osOpen='';$('#status').classList.remove('on');const dt=$('#datetray');dt&&dt.classList.remove('on');$('#launcher').classList.remove('lon');document.body.classList.remove('shpeek')}
+document.addEventListener('mousedown',e=>{if(osOpen&&!e.target.closest('.osb,#status,#datetray,#launcher')&&!(layer.dataset.owner==='qspwr'&&e.target.closest('.osmenu')))closeOS()},true);
 window.addEventListener('blur',closeOS);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeOS()});
+document.addEventListener('keydown',e=>{
+  if(e.key!=='Escape'||e.defaultPrevented||document.body.classList.contains('locked'))return;
+  if(layer.firstChild){const qsp=layer.dataset.owner==='qspwr';e.preventDefault();closePopups();if(qsp){const p=$('#qs [data-a="pwr"]');p&&p.focus()}return}
+  if(osOpen){e.preventDefault();closeOS()}
+});
 
 /* 启动器 */
 function toggleLauncher(){
@@ -2967,7 +2971,7 @@ function toggleQS(cal){
     const a=e.target.closest('[data-a]');if(!a)return;
     const k=a.dataset.a;
     if(k==='cal')toggleCal();
-    else if(k==='pwr'){const r=a.getBoundingClientRect(),ic=p=>svg(p,18);showOsMenu([{label:'关机',icon:ic(P.power),fn:()=>powerOff()},{label:'重启',icon:ic(P.reload),fn:()=>powerOff(true)},{label:'退出',icon:ic(P.exit),fn:()=>lockScreen(true)},{label:'锁定',icon:ic(P.lock),fn:()=>lockScreen()}],r.left,r.top-6,true)}
+    else if(k==='pwr'){const was=wasOwner;wasOwner='';if(e.detail>0&&was==='qspwr')return;const r=a.getBoundingClientRect(),ic=p=>svg(p,18);showOsMenu([{label:'关机',icon:ic(P.power),fn:()=>powerOff()},{label:'重启',icon:ic(P.reload),fn:()=>powerOff(true)},{label:'退出',icon:ic(P.exit),fn:()=>lockScreen(true)},{label:'锁定',icon:ic(P.lock),fn:()=>lockScreen()}],r.left,r.top-6,true,'qspwr')}
     else if(k==='set'){closeOS();openOsSettings()}
   });
 }
@@ -3119,8 +3123,8 @@ function rmSB(){clearTimeout(sbT);$$('.snapbub').forEach(x=>x.remove())}
   wm.addEventListener('click',rmSB);
 }
 
-function showOsMenu(items,x,y,up){
-  showMenu(items,x,y);
+function showOsMenu(items,x,y,up,owner){
+  showMenu(items,x,y,{owner});
   const m=layer.firstElementChild;
   if(m){
     m.classList.add('osmenu');

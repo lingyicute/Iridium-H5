@@ -1175,3 +1175,29 @@ test('auto-hide shelf expands snapped work area and retracts after closing syste
   assert.equal(await page.evaluate(() => WM.wins[0].b.h), 800 - 48);
 });
 
+test('desktop system menus close on Escape and quick settings power menu stays paired with quick settings', async t => {
+  const { page } = await desktop(t);
+  await page.locator('#shelf').click({ button: 'right', position: { x: 300, y: 24 } });
+  assert.equal(await page.locator('#layer .osmenu').count(), 1);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#layer .osmenu').count(), 0);
+
+  await page.locator('#status').click();
+  await page.locator('#qs [data-a="pwr"]').click();
+  assert.equal(await page.locator('#layer .osmenu').count(), 1);
+  // Clicking non-item padding inside the power menu must not close Quick Settings.
+  await page.locator('#layer .osmenu').click({ position: { x: 24, y: 3 } });
+  assert.equal(await page.locator('#qs').count(), 1);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#layer .osmenu').count(), 0);
+  assert.equal(await page.locator('#qs').count(), 1);
+  assert.equal(await page.evaluate(() => document.activeElement === document.querySelector('#qs [data-a="pwr"]')), true);
+  await page.keyboard.press('Escape');
+  assert.equal(await page.locator('#qs').count(), 0);
+
+  await page.locator('#status').click();
+  await page.locator('#qs [data-a="pwr"]').click();
+  await page.evaluate(() => closeOS());
+  assert.equal(await page.locator('#layer .osmenu').count(), 0);
+});
+
