@@ -2107,7 +2107,7 @@ function onDataChange(){
 
 /* ============ 工具栏按钮 ============ */
 $('#back').innerHTML=I.back;$('#fwd').innerHTML=I.fwd;$('#home').innerHTML=I.home;$('#menuBtn').innerHTML=I.more;
-$('#extBtn').innerHTML=svg(P.puzzle,20);if(INC){const pf=$('#profile'),ic=$('#incchip');pf.hidden=false;pf.classList.add('incpill');pf.removeAttribute('title');ic.hidden=false;ic.title='这只是界面演示，不是真正的无痕浏览；宿主浏览器可能保留网站数据';ic.setAttribute('aria-label','无痕模式（模拟）：'+ic.title);ic.innerHTML=svg(P.inc,18)+'无痕模式'}
+$('#extBtn').innerHTML=svg(P.puzzle,20);if(INC){const pf=$('#profile'),ic=$('#incchip');pf.hidden=false;pf.classList.add('incpill');pf.removeAttribute('title');ic.hidden=false;ic.title='这只是界面演示，无法达到真正的无痕浏览；宿主浏览器可能保留网站数据';ic.setAttribute('aria-label','无痕模式（模拟）：'+ic.title);ic.innerHTML=svg(P.inc,18)+'无痕模式'}
 $('#tabsearch').innerHTML=svg(P.down,18);$('#newtab').innerHTML=svg(P.add,18);
 $('#back').onclick=()=>goBack(cur());$('#fwd').onclick=()=>goFwd(cur());
 $('#reload').onclick=()=>{const t=cur();t.loading?stop(t):reload(t)};
@@ -2187,7 +2187,7 @@ toggler($('#siteinfo'),'site',()=>{
   showBubble(b,$('#siteinfo'),'site',false);b.style.padding='0';b.style.width='340px';
   $('#pix',b).onclick=()=>closePopups();b.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList&&e.target.classList.contains('bmi')){e.preventDefault();e.target.click()}});
   const lr=$('#pilearn',b);if(lr)lr.onclick=e=>{e.preventDefault();closePopups();newTab('https://support.google.com/chrome?p=ui_security_indicator',{afterActive:true})};
-  const s0=$('#si0',b);if(s0)s0.onclick=()=>{closePopups();toast('此地址使用 HTTPS；演示无法验证实际连接状态')};
+  const s0=$('#si0',b);if(s0)s0.onclick=()=>{closePopups();toast('此地址使用 HTTPS')};
   const s1=$('#si1',b),s2=$('#si2',b);if(s1)s1.onclick=s2.onclick=()=>{closePopups();openInternal('chrome://settings/privacy')};
 });
 toggler($('#tabsearch'),'ts',()=>{
@@ -2274,8 +2274,8 @@ $('#findup').onclick=()=>doFind(true);$('#finddn').onclick=()=>doFind(false);$('
 /* ============ 清除数据 ============ */
 function clearDataDialog(){
   dialog('清除浏览数据',`<label class="fld"><span>时间范围</span><select id="cr"><option value="3600000">过去一小时</option><option value="86400000">过去 24 小时</option><option value="604800000">过去 7 天</option><option value="2419200000">过去 4 周</option><option value="0" selected>时间不限</option></select></label>
-  <label class="chk"><input type="checkbox" id="c1" checked> 模拟浏览记录</label><label class="chk"><input type="checkbox" id="c2" disabled> Cookie 及其他网站数据（由宿主浏览器管理）</label><label class="chk"><input type="checkbox" id="c3" disabled> 缓存的图片和文件（由宿主浏览器管理）</label><p style="color:var(--text2)">此演示只能清除模拟浏览记录，不能清除宿主浏览器或跨域网站的数据。</p>`,
-  [{text:'取消'},{text:'清除数据',pri:true,fn:ov=>{const r=+$('#cr',ov).value;if(!$('#c1',ov).checked){toast('请至少选择一项要清除的数据');return false}HIST=r?HIST.filter(h=>Date.now()-h.time>r):[];saveH();onDataChange();toast('已清除所选模拟浏览记录')}}]);
+  <label class="chk"><input type="checkbox" id="c1" checked> 历史记录</label><label class="chk"><input type="checkbox" id="c2" disabled> Cookie 及其他网站数据（由宿主浏览器管理）</label><label class="chk"><input type="checkbox" id="c3" disabled> 缓存的图片和文件（由宿主浏览器管理）</label><p style="color:var(--text2)">此演示只能清除历史记录，不能清除宿主浏览器或跨域网站的数据。</p>`,
+  [{text:'取消'},{text:'清除数据',pri:true,fn:ov=>{const r=+$('#cr',ov).value;if(!$('#c1',ov).checked){toast('请至少选择一项要清除的数据');return false}HIST=r?HIST.filter(h=>Date.now()-h.time>r):[];saveH();onDataChange();toast('已清除所选历史记录')}}]);
 }
 function newWindow(url){if(window.IWM)IWM.post('newwin',{url:url||null});else if(window.WM)WM.newWindow(false,url);else window.open(location.href.split('?')[0],'_blank')}
 function newIncognito(url){if(window.IWM){IWM.post('newwin',{inc:true,url:url||null});return}if(window.WM){WM.newWindow(true,url);return}const base=location.href.split('?')[0].split('#')[0];window.open(base+'?incognito=1'+(url?'&u='+encodeURIComponent(url):''),'_blank')}
@@ -2299,7 +2299,7 @@ const fmtTime=ts=>new Date(ts).toLocaleTimeString('zh-CN',{hour:'numeric',minute
 function pageNTP(t){
   t.title='新标签页';
   if(INC){
-    return el(`<div class="pg ntp"><div class="incbox">${svg(P.inc,72)}<h1>模拟无痕模式</h1><p><b>这只是界面演示，不是真正的无痕浏览。</b>页面运行在宿主浏览器中，无法隔离或清除其 Cookie、缓存、网站数据和表单信息，也无法保证其他用户看不到您的活动。</p><p>Iridium 不会在本地保存此窗口的模拟浏览记录、下载记录或会话。书签和下载的文件仍可能保留；宿主浏览器也可能保存活动。</p><p>如需私密浏览，请关闭此窗口并使用宿主浏览器真正的无痕窗口。您访问的网站、雇主或学校以及互联网服务提供商仍可能看到您的活动。</p></div></div>`);
+    return el(`<div class="pg ntp"><div class="incbox">${svg(P.inc,72)}<h1>模拟无痕模式</h1><p><b>这只是界面演示，不是真正的无痕浏览哦。</b>iframe 页面由宿主浏览器渲染，Iridium 无法隔离或清除 iframe 的 Cookie、缓存、网站数据和表单信息。</p><p>Iridium 不会在本地保存此窗口的浏览历史、下载记录或会话，但宿主浏览器可能会保存这些活动。您访问的网站、雇主或学校以及互联网服务提供商也仍然可能看到您的活动。</p><p>如需真正的私密浏览，请关闭此窗口并使用主流浏览器的无痕浏览模式。</p></div></div>`);
   }
   const dk=/#(2b2d42|0f2027)/.test(S.ntpBg);
   const root=el(`<div class="pg ntp${dk?' dk':''}"><div class="ntpc"><div class="ntplogo">${IRI(64)}<span>Iridium</span></div><div class="ntpsearch">${I.search}<input placeholder="在 Iridium 中搜索，或者输入网址" spellcheck="false"><span class="mic" title="语音搜索">${svg(P.mic,22)}</span><span class="mic lens" title="按图搜索">${svg('M4 4h5v2H6v3H4V4zm11 0h5v5h-2V6h-3V4zM4 15h2v3h3v2H4v-5zm14 0h2v3h-3v2h-5v-2h3v-3zM12 8.2a3.8 3.8 0 100 7.6 3.8 3.8 0 000-7.6zm0 2a1.8 1.8 0 110 3.6 1.8 1.8 0 010-3.6z',22)}</span></div><div class="tiles"${S.showTiles===false?' hidden':''}></div></div><button class="cust">${svg(P.edit,16)}自定义 Iridium</button></div>`);
